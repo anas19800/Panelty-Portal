@@ -18,24 +18,31 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { User } from '@/lib/mock-data';
+import { User, Branch } from '@/lib/mock-data';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, doc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { PageGuard } from '@/context/auth-context';
+import { PERMISSIONS, ROLES } from '@/lib/permissions';
 
 const userSchema = z.object({
   name: z.string().min(1, 'الاسم مطلوب.'),
   email: z.string().email('البريد الإلكتروني غير صحيح.'),
   role: z.string({ required_error: 'الرجاء اختيار دور.' }),
+  branchId: z.string().optional(),
+  region: z.string().optional(),
 });
 
 type UserFormValues = z.infer<typeof userSchema>;
 
-const roles = ['مسؤول جودة', 'مدير إقليمي', 'مدير فرع', 'إدارة عليا', 'مسؤول نظام'];
+const roles = Object.values(ROLES);
+type DbRegion = { id: string; name: string; };
 
-export default function UsersPage() {
+function UsersPageContent() {
   const { toast } = useToast();
   const [isLoaded, setIsLoaded] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [regions, setRegions] = useState<DbRegion[]>([]);
   
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -44,32 +51,40 @@ export default function UsersPage() {
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
 
   useEffect(() => {
-    async function fetchUsers() {
+    async function fetchData() {
       try {
-        const querySnapshot = await getDocs(collection(db, "users"));
-        const usersData = querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })) as User[];
-        setUsers(usersData);
+        const usersSnapshot = await getDocs(collection(db, "users"));
+        setUsers(usersSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })) as User[]);
+        
+        const branchesSnapshot = await getDocs(collection(db, 'branches'));
+        setBranches(branchesSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })) as Branch[]);
+        
+        const regionsSnapshot = await getDocs(collection(db, 'regions'));
+        setRegions(regionsSnapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name })));
+
       } catch (error) {
-        console.error('Failed to load users from Firestore', error);
-        toast({ variant: 'destructive', description: 'فشل في تحميل بيانات المستخدمين.' });
+        console.error('Failed to load data from Firestore', error);
+        toast({ variant: 'destructive', description: 'فشل في تحميل البيانات.' });
       } finally {
         setIsLoaded(true);
       }
     }
-    fetchUsers();
+    fetchData();
   }, [toast]);
 
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userSchema),
-    defaultValues: { name: '', email: '', role: '' },
+    defaultValues: { name: '', email: '', role: '', branchId: '', region: '' },
   });
+
+  const watchRole = form.watch('role');
 
   useEffect(() => {
     if (dialogOpen) {
       if (editingUser) {
-        form.reset({ name: editingUser.name, email: editingUser.email, role: editingUser.role });
+        form.reset({ name: editingUser.name, email: editingUser.email, role: editingUser.role, branchId: editingUser.branchId, region: editingUser.region });
       } else {
-        form.reset({ name: '', email: '', role: '' });
+        form.reset({ name: '', email: '', role: '', branchId: '', region: '' });
       }
     }
   }, [editingUser, dialogOpen, form]);
@@ -110,16 +125,24 @@ export default function UsersPage() {
     // It does NOT create an authentication user that can log in.
     // That requires Firebase Admin SDK on a backend.
     try {
+      const branch = branches.find(b => b.id === values.branchId);
+      const dataToSave: Partial<User> = {
+        ...values,
+        branchName: watchRole === ROLES.BRANCH_MANAGER ? branch?.name : undefined,
+      };
+
+
       if (editingUser) {
         const userRef = doc(db, "users", editingUser.id);
-        await updateDoc(userRef, values);
-        setUsers(users.map((u) => u.id === editingUser.id ? { ...editingUser, ...values } : u));
+        await updateDoc(userRef, dataToSave);
+        setUsers(users.map((u) => u.id === editingUser.id ? { ...u, ...dataToSave } : u));
         toast({ description: 'تم تعديل بيانات المستخدم بنجاح.' });
       } else {
-        const newUserDoc = { ...values, status: 'نشط' as const };
+        const newUserDoc = { ...dataToSave, status: 'نشط' as const };
+        // This is not a real auth user, so an admin would need to create credentials separately
         const docRef = await addDoc(collection(db, "users"), newUserDoc);
-        setUsers([...users, { ...newUserDoc, id: docRef.id }]);
-        toast({ description: 'تمت إضافة المستخدم بنجاح.' });
+        setUsers([...users, { ...newUserDoc, id: docRef.id } as User]);
+        toast({ description: 'تمت إضافة المستخدم بنجاح. يجب إنشاء بيانات دخوله بشكل منفصل.' });
       }
       setDialogOpen(false);
     } catch (error) {
@@ -152,7 +175,7 @@ export default function UsersPage() {
                   <TableRow key={user.id}>
                     <TableCell className="font-medium">{user.name}</TableCell>
                     <TableCell>{user.email}</TableCell>
-                    <TableCell>{user.role}</TableCell>
+                    <TableCell>{user.role}{user.role === ROLES.BRANCH_MANAGER && user.branchName ? ` (${user.branchName})` : ''}{user.role === ROLES.REGIONAL_MANAGER && user.region ? ` (${user.region})` : ''}</TableCell>
                     <TableCell><Badge variant={user.status === 'نشط' ? 'default' : 'outline'}>{user.status}</Badge></TableCell>
                     <TableCell>
                        <DropdownMenu>
@@ -180,6 +203,13 @@ export default function UsersPage() {
               <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>الاسم الكامل</FormLabel><FormControl><Input placeholder="مثال: عبدالله الصالح" {...field} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={form.control} name="email" render={({ field }) => (<FormItem><FormLabel>البريد الإلكتروني</FormLabel><FormControl><Input type="email" placeholder="user@example.com" {...field} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={form.control} name="role" render={({ field }) => (<FormItem><FormLabel>الدور</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="اختر دوراً للمستخدم" /></SelectTrigger></FormControl><SelectContent>{roles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
+              {watchRole === ROLES.BRANCH_MANAGER && (
+                <FormField control={form.control} name="branchId" render={({ field }) => (<FormItem><FormLabel>الفرع</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="اختر فرعاً" /></SelectTrigger></FormControl><SelectContent>{branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
+              )}
+              {watchRole === ROLES.REGIONAL_MANAGER && (
+                <FormField control={form.control} name="region" render={({ field }) => (<FormItem><FormLabel>المنطقة</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="اختر منطقة" /></SelectTrigger></FormControl><SelectContent>{regions.map(r => <SelectItem key={r.id} value={r.name}>{r.name}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
+              )}
+
               <DialogFooter><Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>إلغاء</Button><Button type="submit">حفظ</Button></DialogFooter>
             </form>
           </Form>
@@ -193,4 +223,13 @@ export default function UsersPage() {
       </AlertDialog>
     </>
   );
+}
+
+
+export default function UsersPage() {
+    return (
+        <PageGuard feature={PERMISSIONS.USERS} requiredPermission="write">
+            <UsersPageContent />
+        </PageGuard>
+    )
 }

@@ -51,14 +51,19 @@ export type Objection = {
   status: 'مقبول' | 'قيد المراجعة' | 'مرفوض';
   details: string;
   attachments: Attachment[];
+  branchId: string;
+  region: string;
 };
 
 export type User = {
   id: string;
   name: string;
   email: string;
-  role: string;
+  role: 'مدير فرع' | 'مدير إقليمي' | 'مسؤول جودة' | 'إدارة عليا' | 'مسؤول نظام';
   status: 'نشط' | 'غير نشط';
+  branchId?: string; // Required for 'مدير فرع'
+  branchName?: string;
+  region?: string;   // Required for 'مدير إقليمي'
 };
 
 export const regions = ["المنطقة الوسطى", "المنطقة الغربية", "المنطقة الشرقية"];
@@ -81,9 +86,9 @@ export const violations: Violation[] = [
 ];
 
 export const objections: Objection[] = [
-    { id: 'o1', number: 'OBJ-001', violationId: 'v3', violationNumber: 'V-003', branch: 'فرع الخبر', date: '2024-05-12', status: 'مقبول', details: 'الاعتراض الأول', attachments: [] },
-    { id: 'o2', number: 'OBJ-002', violationId: 'v5', violationNumber: 'V-005', branch: 'فرع الياسمين', date: '2024-05-18', status: 'قيد المراجعة', details: 'الاعتراض الثاني', attachments: [] },
-    { id: 'o3', number: 'OBJ-003', violationId: 'v2', violationNumber: 'V-002', branch: 'فرع التحلية', date: '2024-05-20', status: 'مرفوض', details: 'الاعتراض الثالث', attachments: [{name: 'photo.jpg', type: 'image/jpeg'}] },
+    { id: 'o1', number: 'OBJ-001', violationId: 'v3', violationNumber: 'V-003', branch: 'فرع الخبر', date: '2024-05-12', status: 'مقبول', details: 'الاعتراض الأول', attachments: [], branchId: 'b3', region: 'المنطقة الشرقية' },
+    { id: 'o2', number: 'OBJ-002', violationId: 'v5', violationNumber: 'V-005', branch: 'فرع الياسمين', date: '2024-05-18', status: 'قيد المراجعة', details: 'الاعتراض الثاني', attachments: [], branchId: 'b4', region: 'المنطقة الوسطى' },
+    { id: 'o3', number: 'OBJ-003', violationId: 'v2', violationNumber: 'V-002', branch: 'فرع التحلية', date: '2024-05-20', status: 'مرفوض', details: 'الاعتراض الثالث', attachments: [{name: 'photo.jpg', type: 'image/jpeg'}], branchId: 'b2', region: 'المنطقة الغربية' },
 ];
 
 export const users: User[] = [

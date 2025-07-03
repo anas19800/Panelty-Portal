@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -22,6 +22,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Branch } from '@/lib/mock-data';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, doc, addDoc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { useAuth } from '@/context/auth-context';
+import { getPermission, PERMISSIONS, ROLES } from '@/lib/permissions';
 
 
 const branchSchema = z.object({
@@ -39,6 +41,7 @@ type Region = { id: string; name: string };
 type Brand = { id: string; name: string };
 
 export default function BranchesPage() {
+  const { user } = useAuth();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -51,6 +54,9 @@ export default function BranchesPage() {
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [branchToDelete, setBranchToDelete] = useState<Branch | null>(null);
+
+  const permission = getPermission(user?.role, PERMISSIONS.BRANCHES);
+  const canWrite = permission === 'write';
 
   useEffect(() => {
     async function fetchData() {
@@ -80,6 +86,19 @@ export default function BranchesPage() {
       name: '', city: '', region: '', brand: '', manager: '', regionalManager: '', location: '',
     },
   });
+
+  const filteredBranches = useMemo(() => {
+    if (!user) return [];
+    if (permission === 'read_own') {
+      if (user.role === ROLES.BRANCH_MANAGER && user.branchId) {
+        return branches.filter(branch => branch.id === user.branchId);
+      }
+      if (user.role === ROLES.REGIONAL_MANAGER && user.region) {
+        return branches.filter(branch => branch.region === user.region);
+      }
+    }
+    return branches;
+  }, [branches, user, permission]);
 
   useEffect(() => {
     if (dialogOpen) {
@@ -222,12 +241,16 @@ export default function BranchesPage() {
       <input type="file" ref={fileInputRef} className="hidden" accept=".xlsx, .xls, .csv" onChange={handleFileImport} />
       <div className="flex flex-col gap-6">
         <PageHeader title="إدارة الفروع">
-          <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
-            <Upload className="mr-2 h-4 w-4" /> استيراد من Excel
-          </Button>
-          <Button onClick={handleAddNew}>
-            <PlusCircle className="mr-2 h-4 w-4" /> إضافة فرع جديد
-          </Button>
+          {canWrite && (
+            <>
+              <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+                <Upload className="mr-2 h-4 w-4" /> استيراد من Excel
+              </Button>
+              <Button onClick={handleAddNew}>
+                <PlusCircle className="mr-2 h-4 w-4" /> إضافة فرع جديد
+              </Button>
+            </>
+          )}
         </PageHeader>
         <Card>
           <CardHeader>
@@ -245,29 +268,31 @@ export default function BranchesPage() {
                   <TableHead>المنطقة</TableHead>
                   <TableHead>البراند</TableHead>
                   <TableHead>مدير الفرع</TableHead>
-                  <TableHead><span className="sr-only">Actions</span></TableHead>
+                  {canWrite && <TableHead><span className="sr-only">Actions</span></TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {branches.map((branch) => (
+                {filteredBranches.map((branch) => (
                   <TableRow key={branch.id}>
                     <TableCell className="font-medium">{branch.name}</TableCell>
                     <TableCell>{branch.city}</TableCell>
                     <TableCell>{branch.region}</TableCell>
                     <TableCell>{branch.brand}</TableCell>
                     <TableCell>{branch.manager}</TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button aria-haspopup="true" size="icon" variant="ghost"><MoreHorizontal className="h-4 w-4" /><span className="sr-only">Toggle menu</span></Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>إجراءات</DropdownMenuLabel>
-                          <DropdownMenuItem onClick={() => handleEdit(branch)}>تعديل</DropdownMenuItem>
-                          <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleDeleteClick(branch)}>حذف</DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
+                    {canWrite && (
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button aria-haspopup="true" size="icon" variant="ghost"><MoreHorizontal className="h-4 w-4" /><span className="sr-only">Toggle menu</span></Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>إجراءات</DropdownMenuLabel>
+                            <DropdownMenuItem onClick={() => handleEdit(branch)}>تعديل</DropdownMenuItem>
+                            <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleDeleteClick(branch)}>حذف</DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>

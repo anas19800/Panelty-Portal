@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -22,7 +22,9 @@ import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Objection, Violation, Attachment } from '@/lib/mock-data';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, doc, addDoc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, doc, addDoc, updateDoc, deleteDoc, serverTimestamp, query, where } from 'firebase/firestore';
+import { useAuth } from '@/context/auth-context';
+import { getPermission, PERMISSIONS, ROLES } from '@/lib/permissions';
 
 const objectionSchema = z.object({
   violationId: z.string({ required_error: 'الرجاء اختيار مخالفة.' }),
@@ -32,6 +34,7 @@ const objectionSchema = z.object({
 type ObjectionFormValues = z.infer<typeof objectionSchema>;
 
 export default function ObjectionsPage() {
+  const { user } = useAuth();
   const { toast } = useToast();
   const [isLoaded, setIsLoaded] = useState(false);
   const [objections, setObjections] = useState<Objection[]>([]);
@@ -41,15 +44,31 @@ export default function ObjectionsPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [objectionToDelete, setObjectionToDelete] = useState<Objection | null>(null);
   const [attachments, setAttachments] = useState<File[]>([]);
+  
+  const permission = getPermission(user?.role, PERMISSIONS.OBJECTIONS);
+  const canWrite = permission === 'write';
 
   useEffect(() => {
     async function fetchData() {
         try {
             const objectionsSnapshot = await getDocs(collection(db, 'objections'));
-            setObjections(objectionsSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })) as Objection[]);
+            const allObjections = objectionsSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })) as Objection[];
             
+            // Add branchId and region to objections if they don't exist for filtering
             const violationsSnapshot = await getDocs(collection(db, 'violations'));
-            setViolations(violationsSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })) as Violation[]);
+            const allViolations = violationsSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })) as Violation[];
+            setViolations(allViolations);
+            
+            const objectionsWithDetails = allObjections.map(o => {
+                const v = allViolations.find(v => v.id === o.violationId);
+                return {
+                    ...o,
+                    branchId: v?.branchId || '',
+                    region: v?.region || '',
+                }
+            })
+            setObjections(objectionsWithDetails);
+
         } catch (error) {
             console.error('Failed to load data from Firestore', error);
             toast({ variant: 'destructive', description: 'فشل تحميل البيانات من قاعدة البيانات.' });
@@ -59,6 +78,19 @@ export default function ObjectionsPage() {
     }
     fetchData();
   }, [toast]);
+  
+  const filteredObjections = useMemo(() => {
+    if (!user) return [];
+    if (permission === 'read_own') {
+      if (user.role === ROLES.BRANCH_MANAGER && user.branchId) {
+        return objections.filter(o => o.branchId === user.branchId);
+      }
+      if (user.role === ROLES.REGIONAL_MANAGER && user.region) {
+        return objections.filter(o => o.region === user.region);
+      }
+    }
+    return objections;
+  }, [objections, user, permission]);
 
   const form = useForm<ObjectionFormValues>({
     resolver: zodResolver(objectionSchema),
@@ -102,7 +134,9 @@ export default function ObjectionsPage() {
 
         const docRef = await addDoc(collection(db, 'objections'), newObjectionData);
         
-        setObjections([{ ...newObjectionData, id: docRef.id }, ...objections]);
+        // Refetch to update list correctly
+        const newDoc = { ...newObjectionData, id: docRef.id, branchId: violation.branchId, region: violation.region };
+        setObjections([ newDoc, ...objections ]);
         toast({ description: 'تم تسجيل الاعتراض بنجاح.' });
         handleCloseDialog();
     } catch (error) {
@@ -166,10 +200,12 @@ export default function ObjectionsPage() {
     <>
       <div className="flex flex-col gap-6">
         <PageHeader title="متابعة الاعتراضات">
-          <Button onClick={() => setDialogOpen(true)}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            تسجيل اعتراض جديد
-          </Button>
+          {canWrite && (
+            <Button onClick={() => setDialogOpen(true)}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                تسجيل اعتراض جديد
+            </Button>
+          )}
         </PageHeader>
         <Card>
           <CardHeader>
@@ -188,11 +224,11 @@ export default function ObjectionsPage() {
                   <TableHead>تاريخ الاعتراض</TableHead>
                   <TableHead>المرفقات</TableHead>
                   <TableHead>الحالة</TableHead>
-                  <TableHead><span className="sr-only">Actions</span></TableHead>
+                  {canWrite && <TableHead><span className="sr-only">Actions</span></TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {objections.map((objection) => (
+                {filteredObjections.map((objection) => (
                   <TableRow key={objection.id}>
                     <TableCell className="font-medium">{objection.number}</TableCell>
                     <TableCell>{objection.violationNumber}</TableCell>
@@ -221,23 +257,25 @@ export default function ObjectionsPage() {
                         {objection.status}
                       </Badge>
                     </TableCell>
-                    <TableCell>
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button aria-haspopup="true" size="icon" variant="ghost">
-                                    <MoreHorizontal className="h-4 w-4" />
-                                    <span className="sr-only">Toggle menu</span>
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>تغيير الحالة</DropdownMenuLabel>
-                                <DropdownMenuItem onClick={() => handleStatusChange(objection.id, 'قيد المراجعة')}>قيد المراجعة</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleStatusChange(objection.id, 'مقبول')}>مقبول</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleStatusChange(objection.id, 'مرفوض')}>مرفوض</DropdownMenuItem>
-                                <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleDeleteClick(objection)}>حذف</DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    </TableCell>
+                    {canWrite && (
+                        <TableCell>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button aria-haspopup="true" size="icon" variant="ghost">
+                                        <MoreHorizontal className="h-4 w-4" />
+                                        <span className="sr-only">Toggle menu</span>
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuLabel>تغيير الحالة</DropdownMenuLabel>
+                                    <DropdownMenuItem onClick={() => handleStatusChange(objection.id, 'قيد المراجعة')}>قيد المراجعة</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleStatusChange(objection.id, 'مقبول')}>مقبول</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleStatusChange(objection.id, 'مرفوض')}>مرفوض</DropdownMenuItem>
+                                    <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleDeleteClick(objection)}>حذف</DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>

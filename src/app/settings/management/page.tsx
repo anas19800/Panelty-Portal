@@ -14,6 +14,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, doc, addDoc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { PageGuard } from '@/context/auth-context';
+import { PERMISSIONS } from '@/lib/permissions';
 
 type DbRegion = { id: string; name: string; };
 type DbBrand = { id: string; name: string; };
@@ -69,7 +71,7 @@ function SubCategoryManager({ mainCategory, onAddSubCategory, onDeleteSubCategor
     );
 }
 
-export default function ManagementPage() {
+function ManagementPageContent() {
   const { toast } = useToast();
   const [regions, setRegions] = useState<DbRegion[]>([]);
   const [brands, setBrands] = useState<DbBrand[]>([]);
@@ -268,4 +270,12 @@ export default function ManagementPage() {
       </Tabs>
     </div>
   );
+}
+
+export default function ManagementPage() {
+    return (
+        <PageGuard feature={PERMISSIONS.MANAGEMENT} requiredPermission="write">
+            <ManagementPageContent />
+        </PageGuard>
+    )
 }

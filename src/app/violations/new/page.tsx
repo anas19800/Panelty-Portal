@@ -23,6 +23,8 @@ import { Branch, ViolationCategory } from '@/lib/mock-data';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, addDoc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
+import { PageGuard } from '@/context/auth-context';
+import { PERMISSIONS } from '@/lib/permissions';
 
 const violationFormSchema = z.object({
   region: z.string({ required_error: "الرجاء اختيار منطقة." }),
@@ -41,7 +43,7 @@ type ViolationFormValues = z.infer<typeof violationFormSchema>;
 type Region = { id: string, name: string };
 type Brand = { id: string, name: string };
 
-export default function NewViolationPage() {
+function NewViolationPageContent() {
   const { toast } = useToast();
   const router = useRouter();
   const [branchDetails, setBranchDetails] = useState<Branch | null>(null);
@@ -225,4 +227,12 @@ export default function NewViolationPage() {
       </Form>
     </div>
   );
+}
+
+export default function NewViolationPage() {
+    return (
+        <PageGuard feature={PERMISSIONS.VIOLATIONS} requiredPermission="write">
+            <NewViolationPageContent />
+        </PageGuard>
+    )
 }

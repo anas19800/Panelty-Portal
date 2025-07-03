@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useAuthState } from 'react-firebase-hooks/auth';
 import { signOut } from 'firebase/auth';
 
 import { auth } from '@/lib/firebase';
+import { useAuth } from '@/context/auth-context';
+import { getPermission, PERMISSIONS } from '@/lib/permissions';
 import {
   SidebarProvider,
   Sidebar,
@@ -17,7 +18,6 @@ import {
   SidebarMenuButton,
   SidebarInset,
   SidebarTrigger,
-  SidebarFooter,
 } from '@/components/ui/sidebar';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -42,32 +42,35 @@ import {
   Database,
 } from 'lucide-react';
 
-const navItems = [
-  { href: '/', label: 'لوحة المعلومات', icon: Home },
-  { href: '/violations', label: 'المخالفات', icon: FileText },
-  { href: '/objections', label: 'الاعتراضات', icon: Gavel },
-  { href: '/branches', label: 'الفروع', icon: Building },
-  { href: '/settings/users', label: 'المستخدمون', icon: Users },
-  { href: '/settings/management', label: 'إدارة البيانات', icon: Database },
+const allNavItems = [
+  { href: '/', label: 'لوحة المعلومات', icon: Home, feature: PERMISSIONS.DASHBOARD },
+  { href: '/violations', label: 'المخالفات', icon: FileText, feature: PERMISSIONS.VIOLATIONS },
+  { href: '/objections', label: 'الاعتراضات', icon: Gavel, feature: PERMISSIONS.OBJECTIONS },
+  { href: '/branches', label: 'الفروع', icon: Building, feature: PERMISSIONS.BRANCHES },
+  { href: '/settings/users', label: 'المستخدمون', icon: Users, feature: PERMISSIONS.USERS },
+  { href: '/settings/management', label: 'إدارة البيانات', icon: Database, feature: PERMISSIONS.MANAGEMENT },
 ];
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [user, loading, error] = useAuthState(auth);
+  const { authUser, user, loading } = useAuth();
 
   useEffect(() => {
-    if (error) {
-      console.error('Firebase auth error:', error);
-    }
-    // When no longer loading, if there's no user, redirect to login
-    if (!loading && !user) {
+    // When no longer loading, if there's no authenticated user, redirect to login
+    if (!loading && !authUser) {
       router.push('/login');
     }
-  }, [user, loading, router, error]);
+  }, [authUser, loading, router]);
+  
+  const navItems = useMemo(() => {
+      if (!user) return [];
+      return allNavItems.filter(item => getPermission(user.role, item.feature) !== 'none');
+  }, [user]);
 
-  // While loading, show a full-screen loader
-  if (loading || !user) {
+
+  // While loading auth state or user profile, show a full-screen loader
+  if (loading || !authUser || !user) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="flex flex-col items-center gap-4 text-center">
@@ -131,10 +134,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 }
 
 function UserMenu() {
-  const [user] = useAuthState(auth);
+  const { authUser, user } = useAuth();
+  const router = useRouter();
 
   const handleLogout = async () => {
     await signOut(auth);
+    router.push('/login');
   };
 
   return (
@@ -147,7 +152,7 @@ function UserMenu() {
         >
           <Avatar>
             <AvatarImage
-              src={user?.photoURL ?? "https://placehold.co/32x32.png"}
+              src={authUser?.photoURL ?? "https://placehold.co/32x32.png"}
               alt="صورة المستخدم"
               data-ai-hint="user avatar"
             />
@@ -156,13 +161,13 @@ function UserMenu() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuLabel>{user?.displayName ?? user?.email}</DropdownMenuLabel>
+        <DropdownMenuLabel>{user?.name ?? authUser?.email}</DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem>
+        <DropdownMenuItem disabled>
           <Settings className="mr-2 h-4 w-4" />
           <span>الإعدادات</span>
         </DropdownMenuItem>
-        <DropdownMenuItem>
+        <DropdownMenuItem disabled>
           <LifeBuoy className="mr-2 h-4 w-4" />
           <span>الدعم</span>
         </DropdownMenuItem>

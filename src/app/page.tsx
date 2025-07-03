@@ -23,29 +23,51 @@ import {
   Gavel,
   LineChart,
 } from 'lucide-react';
-import { Violation, Objection } from '@/lib/mock-data';
+import { Violation, Objection, User } from '@/lib/mock-data';
 import { PageHeader } from '@/components/page-header';
 import { DashboardCharts } from '@/components/dashboard-charts';
 import { Skeleton } from '@/components/ui/skeleton';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
-
+import { useAuth } from '@/context/auth-context';
+import { getPermission, PERMISSIONS, ROLES } from '@/lib/permissions';
 
 export default function Dashboard() {
+  const { user } = useAuth();
   const [violations, setViolations] = useState<Violation[]>([]);
   const [objections, setObjections] = useState<Objection[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
+    if (!user) return;
+
     async function fetchData() {
       try {
-        const violationsSnapshot = await getDocs(collection(db, 'violations'));
+        const permission = getPermission(user.role, PERMISSIONS.DASHBOARD);
+        let violationsQuery = collection(db, 'violations');
+        let objectionsQuery = collection(db, 'objections');
+
+        if (permission === 'read_own') {
+          if (user.role === ROLES.BRANCH_MANAGER && user.branchId) {
+            // @ts-ignore
+            violationsQuery = query(violationsQuery, where('branchId', '==', user.branchId));
+            // @ts-ignore
+            objectionsQuery = query(objectionsQuery, where('branchId', '==', user.branchId));
+          } else if (user.role === ROLES.REGIONAL_MANAGER && user.region) {
+            // @ts-ignore
+            violationsQuery = query(violationsQuery, where('region', '==', user.region));
+            // @ts-ignore
+            objectionsQuery = query(objectionsQuery, where('region', '==', user.region));
+          }
+        }
+        
+        const violationsSnapshot = await getDocs(violationsQuery);
         const violationsData = violationsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Violation[];
         setViolations(violationsData);
         
-        const objectionsSnapshot = await getDocs(collection(db, 'objections'));
+        const objectionsSnapshot = await getDocs(objectionsQuery);
         const objectionsData = objectionsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Objection[];
         setObjections(objectionsData);
 
@@ -57,7 +79,7 @@ export default function Dashboard() {
       }
     }
     fetchData();
-  }, [toast]);
+  }, [user, toast]);
 
   const dashboardStats = useMemo(() => {
     const totalViolations = violations.length;
