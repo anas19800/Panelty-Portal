@@ -3,6 +3,7 @@ export type Violation = {
   violationNumber: string;
   paymentNumber: string;
   date: string;
+  lastObjectionDate?: string;
   category: string;
   subCategory: string;
   amount: number;

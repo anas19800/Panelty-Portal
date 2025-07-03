@@ -33,6 +33,7 @@ const violationFormSchema = z.object({
   violationNumber: z.string().min(1, "الرجاء إدخال رقم المخالفة."),
   paymentNumber: z.string().optional(),
   violationDate: z.date({ required_error: "الرجاء تحديد تاريخ الرصد." }),
+  lastObjectionDate: z.date({ required_error: "الرجاء تحديد آخر موعد للاعتراض." }),
   fineAmount: z.coerce.number().positive("يجب أن تكون قيمة المخالفة أكبر من صفر."),
   category: z.string({ required_error: "الرجاء اختيار الفئة الرئيسية." }),
   subCategory: z.string({ required_error: "الرجاء اختيار الفئة الفرعية." }),
@@ -115,6 +116,7 @@ function NewViolationPageContent() {
             violationNumber: data.violationNumber,
             paymentNumber: data.paymentNumber || '',
             date: format(data.violationDate, 'yyyy-MM-dd'),
+            lastObjectionDate: format(data.lastObjectionDate, 'yyyy-MM-dd'),
             category: category?.mainCategory || 'غير محدد',
             subCategory: subCategory?.name || 'غير محدد',
             amount: data.fineAmount,
@@ -178,6 +180,7 @@ function NewViolationPageContent() {
                 <FormField control={form.control} name="violationNumber" render={({ field }) => (<FormItem><FormLabel>رقم المخالفة</FormLabel><FormControl><Input placeholder="e.g., 123456789" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={form.control} name="paymentNumber" render={({ field }) => (<FormItem><FormLabel>رقم السداد (اختياري)</FormLabel><FormControl><Input placeholder="e.g., SADAD-98765" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={form.control} name="violationDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>تاريخ الرصد</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full justify-start text-right font-normal", !field.value && "text-muted-foreground")}><CalendarIcon className="ml-2 h-4 w-4" />{field.value ? format(field.value, "PPP") : <span>اختر تاريخ</span>}</Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="lastObjectionDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>آخر موعد للاعتراض</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full justify-start text-right font-normal", !field.value && "text-muted-foreground")}><CalendarIcon className="ml-2 h-4 w-4" />{field.value ? format(field.value, "PPP") : <span>اختر تاريخ</span>}</Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)} />
                 <FormField control={form.control} name="fineAmount" render={({ field }) => (<FormItem><FormLabel>قيمة المخالفة</FormLabel><FormControl><Input type="number" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={form.control} name="category" render={({ field }) => (<FormItem><FormLabel>الفئة العامة</FormLabel><Select onValueChange={field.onChange} value={field.value || ''}><FormControl><SelectTrigger><SelectValue placeholder="اختر فئة" /></SelectTrigger></FormControl><SelectContent>{categories.map(c => <SelectItem key={c.mainCategoryCode} value={c.mainCategoryCode}>{c.mainCategory}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
                 <FormField control={form.control} name="subCategory" render={({ field }) => (<FormItem><FormLabel>الفئة الفرعية</FormLabel><Select onValueChange={field.onChange} value={field.value || ''} disabled={!watchCategory}><FormControl><SelectTrigger><SelectValue placeholder="اختر فئة فرعية" /></SelectTrigger></FormControl><SelectContent>{availableSubCategories.map(sc => <SelectItem key={sc.code} value={sc.code}>{`${sc.code} - ${sc.name}`}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />

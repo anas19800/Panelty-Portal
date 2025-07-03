@@ -124,6 +124,7 @@ export default function ViolationsPage() {
                   <TableHead>رقم المخالفة</TableHead>
                   <TableHead>الفرع</TableHead>
                   <TableHead>تاريخ الرصد</TableHead>
+                  <TableHead>آخر موعد للاعتراض</TableHead>
                   <TableHead>القيمة</TableHead>
                   <TableHead>الحالة</TableHead>
                   {canWrite && <TableHead><span className="sr-only">Actions</span></TableHead>}
@@ -137,6 +138,7 @@ export default function ViolationsPage() {
                     </TableCell>
                     <TableCell>{violation.branchName}</TableCell>
                     <TableCell>{violation.date}</TableCell>
+                    <TableCell>{violation.lastObjectionDate || '—'}</TableCell>
                     <TableCell>
                       {violation.amount.toLocaleString('ar-SA', {
                         style: 'currency',
