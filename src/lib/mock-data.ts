@@ -36,6 +36,11 @@ export type ViolationCategory = {
   subCategories: ViolationSubCategory[];
 };
 
+export type Attachment = {
+  name: string;
+  type: string;
+};
+
 export type Objection = {
   id: string;
   number: string;
@@ -45,6 +50,7 @@ export type Objection = {
   date: string;
   status: 'مقبول' | 'قيد المراجعة' | 'مرفوض';
   details: string;
+  attachments: Attachment[];
 };
 
 export const regions = ["المنطقة الوسطى", "المنطقة الغربية", "المنطقة الشرقية"];
@@ -67,9 +73,9 @@ export const violations: Violation[] = [
 ];
 
 export const objections: Objection[] = [
-    { id: 'o1', number: 'OBJ-001', violationId: 'v3', violationNumber: 'V-003', branch: 'فرع الخبر', date: '2024-05-12', status: 'مقبول', details: 'الاعتراض الأول' },
-    { id: 'o2', number: 'OBJ-002', violationId: 'v5', violationNumber: 'V-005', branch: 'فرع الياسمين', date: '2024-05-18', status: 'قيد المراجعة', details: 'الاعتراض الثاني' },
-    { id: 'o3', number: 'OBJ-003', violationId: 'v2', violationNumber: 'V-002', branch: 'فرع التحلية', date: '2024-05-20', status: 'مرفوض', details: 'الاعتراض الثالث' },
+    { id: 'o1', number: 'OBJ-001', violationId: 'v3', violationNumber: 'V-003', branch: 'فرع الخبر', date: '2024-05-12', status: 'مقبول', details: 'الاعتراض الأول', attachments: [] },
+    { id: 'o2', number: 'OBJ-002', violationId: 'v5', violationNumber: 'V-005', branch: 'فرع الياسمين', date: '2024-05-18', status: 'قيد المراجعة', details: 'الاعتراض الثاني', attachments: [] },
+    { id: 'o3', number: 'OBJ-003', violationId: 'v2', violationNumber: 'V-002', branch: 'فرع التحلية', date: '2024-05-20', status: 'مرفوض', details: 'الاعتراض الثالث', attachments: [{name: 'photo.jpg', type: 'image/jpeg'}] },
 ];
 
 export const recentViolations = violations.slice(0,5).map(v => ({

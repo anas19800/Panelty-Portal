@@ -23,7 +23,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { MoreHorizontal, PlusCircle } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Upload, Paperclip } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -64,6 +64,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -72,6 +73,7 @@ import {
   violations as initialViolations,
   Objection,
   Violation,
+  Attachment,
 } from '@/lib/mock-data';
 
 const objectionSchema = z.object({
@@ -90,6 +92,7 @@ export default function ObjectionsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [objectionToDelete, setObjectionToDelete] = useState<Objection | null>(null);
+  const [attachments, setAttachments] = useState<File[]>([]);
 
   useEffect(() => {
     try {
@@ -120,6 +123,18 @@ export default function ObjectionsPage() {
   const form = useForm<ObjectionFormValues>({
     resolver: zodResolver(objectionSchema),
   });
+  
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files) {
+        setAttachments(Array.from(event.target.files));
+    }
+  };
+  
+  const handleCloseDialog = () => {
+    setDialogOpen(false);
+    setAttachments([]);
+    form.reset();
+  };
 
   const onSubmit = (values: ObjectionFormValues) => {
     const violation = violations.find(v => v.id === values.violationId);
@@ -137,12 +152,12 @@ export default function ObjectionsPage() {
         date: new Date().toISOString().split('T')[0],
         status: 'قيد المراجعة',
         details: values.details,
+        attachments: attachments.map(file => ({ name: file.name, type: file.type })),
     };
     
     setObjections([newObjection, ...objections]);
     toast({ description: 'تم تسجيل الاعتراض بنجاح.' });
-    setDialogOpen(false);
-    form.reset();
+    handleCloseDialog();
   };
 
   const handleDeleteClick = (objection: Objection) => {
@@ -206,6 +221,7 @@ export default function ObjectionsPage() {
                   <TableHead>رقم المخالفة</TableHead>
                   <TableHead>الفرع</TableHead>
                   <TableHead>تاريخ الاعتراض</TableHead>
+                  <TableHead>المرفقات</TableHead>
                   <TableHead>الحالة</TableHead>
                   <TableHead><span className="sr-only">Actions</span></TableHead>
                 </TableRow>
@@ -217,6 +233,16 @@ export default function ObjectionsPage() {
                     <TableCell>{objection.violationNumber}</TableCell>
                     <TableCell>{objection.branch}</TableCell>
                     <TableCell>{objection.date}</TableCell>
+                    <TableCell>
+                      {objection.attachments && objection.attachments.length > 0 ? (
+                          <div className="flex items-center gap-1 text-muted-foreground">
+                              <Paperclip className="h-4 w-4" />
+                              <span>{objection.attachments.length}</span>
+                          </div>
+                      ) : (
+                          <span>-</span>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <Badge
                         variant={
@@ -298,8 +324,31 @@ export default function ObjectionsPage() {
                     </FormItem>
                   )}
                 />
+                <div className="space-y-2">
+                    <FormLabel>المرفقات (اختياري)</FormLabel>
+                     <div className="flex items-center justify-center w-full">
+                        <label htmlFor="dropzone-file" className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted">
+                            <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                <Upload className="w-8 h-8 mb-4 text-muted-foreground" />
+                                <p className="mb-2 text-sm text-muted-foreground"><span className="font-semibold">انقر للرفع</span> أو اسحب وأفلت</p>
+                                <p className="text-xs text-muted-foreground">صورة, فيديو, PDF</p>
+                            </div>
+                            <Input id="dropzone-file" type="file" className="hidden" multiple onChange={handleFileChange} />
+                        </label>
+                    </div>
+                     {attachments.length > 0 && (
+                        <div className="space-y-1 pt-2 text-sm text-muted-foreground">
+                            <p className="font-medium text-foreground">الملفات المختارة:</p>
+                            <ul className="list-disc list-inside">
+                                {attachments.map((file, index) => (
+                                    <li key={index}>{file.name}</li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+                </div>
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>إلغاء</Button>
+                <Button type="button" variant="outline" onClick={handleCloseDialog}>إلغاء</Button>
                 <Button type="submit">حفظ الاعتراض</Button>
               </DialogFooter>
             </form>
