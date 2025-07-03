@@ -15,40 +15,14 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import {
-  BarChart,
   DollarSign,
   FileText,
   Gavel,
   LineChart,
 } from 'lucide-react';
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from '@/components/ui/chart';
-import { Bar, BarChart as BarChartComponent, ResponsiveContainer, XAxis, YAxis, Pie, PieChart, Cell } from 'recharts';
-import { recentViolations, violationsByBrand, violationsByStatus } from '@/lib/mock-data';
+import { recentViolations } from '@/lib/mock-data';
 import { PageHeader } from '@/components/page-header';
-
-const CHART_CONFIG_BRAND = {
-  violations: {
-    label: "المخالفات",
-  },
-  ...violationsByBrand.reduce((acc, { brand, fill }) => {
-    acc[brand] = { label: brand, color: fill };
-    return acc;
-  }, {})
-};
-
-const CHART_CONFIG_STATUS = {
-  violations: {
-    label: "المخالفات",
-  },
-  ...violationsByStatus.reduce((acc, { status, fill }) => {
-    acc[status] = { label: status, color: fill };
-    return acc;
-  }, {})
-}
+import { DashboardCharts } from '@/components/dashboard-charts';
 
 export default function Dashboard() {
   return (
@@ -100,55 +74,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <Card className="lg:col-span-4">
-          <CardHeader>
-            <CardTitle>المخالفات حسب البراند</CardTitle>
-            <CardDescription>
-              عرض لعدد المخالفات المسجلة لكل براند خلال هذا العام.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-             <ChartContainer config={CHART_CONFIG_BRAND} className="min-h-[200px] w-full">
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChartComponent data={violationsByBrand} layout="vertical" margin={{ right: 20 }}>
-                  <XAxis type="number" dataKey="violations" hide />
-                  <YAxis dataKey="brand" type="category" tickLine={false} axisLine={false} tickMargin={10} width={80} />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Bar dataKey="violations" radius={5}>
-                    {violationsByBrand.map((entry) => (
-                      <Cell key={`cell-${entry.brand}`} fill={entry.fill} />
-                    ))}
-                  </Bar>
-                </BarChartComponent>
-              </ResponsiveContainer>
-             </ChartContainer>
-          </CardContent>
-        </Card>
-        <Card className="lg:col-span-3">
-          <CardHeader>
-            <CardTitle>حالة المخالفات</CardTitle>
-            <CardDescription>توزيع المخالفات حسب حالتها.</CardDescription>
-          </CardHeader>
-          <CardContent>
-             <ChartContainer config={CHART_CONFIG_STATUS} className="mx-auto aspect-square max-h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <ChartTooltip
-                      cursor={false}
-                      content={<ChartTooltipContent hideLabel />}
-                    />
-                    <Pie data={violationsByStatus} dataKey="count" nameKey="status" innerRadius={60} strokeWidth={5}>
-                       {violationsByStatus.map((entry) => (
-                          <Cell key={`cell-${entry.status}`} fill={entry.fill} />
-                        ))}
-                    </Pie>
-                  </PieChart>
-              </ResponsiveContainer>
-             </ChartContainer>
-          </CardContent>
-        </Card>
-      </div>
+      <DashboardCharts />
       <Card>
         <CardHeader>
           <CardTitle>أحدث المخالفات</CardTitle>
