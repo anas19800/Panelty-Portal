@@ -93,7 +93,7 @@ export function DashboardCharts({ violations }: { violations: Violation[] }) {
         <CardContent>
            <ChartContainer config={chartConfigBrand} className="min-h-[200px] w-full">
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={violationsByBrand} layout="vertical" margin={{ left: 10 }}>
+              <BarChart data={violationsByBrand} layout="vertical" margin={{ left: 20 }}>
                 <XAxis type="number" dataKey="violations" hide />
                 <YAxis dataKey="brand" type="category" tickLine={false} axisLine={false} tickMargin={10} width={90} />
                 <ChartTooltip content={<ChartTooltipContent />} />
