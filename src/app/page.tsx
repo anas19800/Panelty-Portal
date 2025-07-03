@@ -55,6 +55,7 @@ export default function Dashboard() {
   const [selectedCity, setSelectedCity] = useState<string>('all');
   const [selectedBranch, setSelectedBranch] = useState<string>('all');
   const [selectedYear, setSelectedYear] = useState<string>('all');
+  const [selectedStatus, setSelectedStatus] = useState<string>('all');
 
   useEffect(() => {
     if (!user) return;
@@ -121,7 +122,8 @@ export default function Dashboard() {
         (selectedBrand === 'all' || v.brand === selectedBrand) &&
         (selectedCity === 'all' || v.city === selectedCity) &&
         (selectedBranch === 'all' || v.branchId === selectedBranch) &&
-        (selectedYear === 'all' || new Date(v.date).getFullYear().toString() === selectedYear)
+        (selectedYear === 'all' || new Date(v.date).getFullYear().toString() === selectedYear) &&
+        (selectedStatus === 'all' || v.status === selectedStatus)
     );
 
     const filteredObjections = objections
@@ -146,7 +148,7 @@ export default function Dashboard() {
       );
 
     return { filteredViolations, filteredObjections };
-  }, [violations, objections, selectedRegion, selectedBrand, selectedCity, selectedBranch, selectedYear]);
+  }, [violations, objections, selectedRegion, selectedBrand, selectedCity, selectedBranch, selectedYear, selectedStatus]);
 
   const dashboardStats = useMemo(() => {
     const { filteredViolations, filteredObjections } = filteredData;
@@ -240,7 +242,7 @@ export default function Dashboard() {
           <CardDescription>تصفية البيانات المعروضة في لوحة المعلومات.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
             <div className="grid gap-2">
               <Label htmlFor="region-filter">المنطقة</Label>
               <Select value={selectedRegion} onValueChange={setSelectedRegion}>
@@ -288,6 +290,18 @@ export default function Dashboard() {
                 <SelectContent>
                   <SelectItem value="all">الكل</SelectItem>
                   {years.map((y) => (<SelectItem key={y} value={y}>{y}</SelectItem>))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="status-filter">حالة المخالفة</Label>
+              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                <SelectTrigger id="status-filter"><SelectValue placeholder="الكل" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">الكل</SelectItem>
+                  <SelectItem value="مدفوعة">مدفوعة</SelectItem>
+                  <SelectItem value="غير مدفوعة">غير مدفوعة</SelectItem>
+                  <SelectItem value="ملفية">ملفية</SelectItem>
                 </SelectContent>
               </Select>
             </div>
