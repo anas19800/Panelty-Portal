@@ -35,6 +35,7 @@ import {
   Shield,
   LogOut,
   LifeBuoy,
+  Database,
 } from 'lucide-react';
 
 const navItems = [
@@ -43,6 +44,7 @@ const navItems = [
   { href: '/objections', label: 'الاعتراضات', icon: Gavel },
   { href: '/branches', label: 'الفروع', icon: Building },
   { href: '/settings/users', label: 'المستخدمون', icon: Users },
+  { href: '/settings/management', label: 'إدارة البيانات', icon: Database },
 ];
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
@@ -71,7 +73,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <SidebarMenuItem key={item.href}>
                 <SidebarMenuButton
                   asChild
-                  isActive={pathname === item.href}
+                  isActive={pathname.startsWith(item.href) && (item.href !== '/' || pathname === '/')}
                   tooltip={{
                     children: item.label,
                     side: 'left',
@@ -86,12 +88,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             ))}
           </SidebarMenu>
         </SidebarContent>
-        <SidebarFooter className="p-4 group-data-[collapsible=icon]:p-2">
-            <SidebarMenuButton tooltip={{children: "الإعدادات", side: "left"}}>
-                <Settings/>
-                <span>الإعدادات</span>
-            </SidebarMenuButton>
-        </SidebarFooter>
       </Sidebar>
       <SidebarInset>
         <header className="sticky top-0 z-10 flex h-16 items-center justify-between gap-4 border-b bg-background px-4 sm:px-6">

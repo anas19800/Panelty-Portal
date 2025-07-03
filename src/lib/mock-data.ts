@@ -25,6 +25,11 @@ export type Branch = {
   location: string;
 };
 
+export type ViolationCategory = {
+  mainCategory: string;
+  subCategories: string[];
+};
+
 export const regions = ["المنطقة الوسطى", "المنطقة الغربية", "المنطقة الشرقية"];
 export const brands = ["براند ألف", "براند باء", "براند جيم"];
 
@@ -63,4 +68,31 @@ export const violationsByStatus = [
   { status: 'مدفوعة', count: 45, fill: 'var(--color-chart-2)' },
   { status: 'غير مدفوعة', count: 30, fill: 'var(--color-chart-5)' },
   { status: 'ملفية', count: 25, fill: 'var(--color-chart-3)' },
+];
+
+export const violationCategories: ViolationCategory[] = [
+    {
+        mainCategory: "متطلبات الموقع والمبنى",
+        subCategories: ["عدم ملاءمة الموقع", "عدم وجود ترخيص بناء", "مخالفة في مساحة المحل"],
+    },
+    {
+        mainCategory: "التجهيزات الداخلية",
+        subCategories: ["عدم كفاءة الإضاءة", "عدم كفاءة التهوية", "الأرضيات غير سهلة التنظيف"],
+    },
+    {
+        mainCategory: "المرافق الصحية",
+        subCategories: ["عدم وجود دورات مياه كافية", "عدم نظافة دورات المياه", "عدم توفر مغاسل"],
+    },
+    {
+        mainCategory: "مكافحة الحشرات والقوارض",
+        subCategories: ["عدم وجود برنامج مكافحة", "وجود حشرات أو قوارض", "عدم وجود مصائد فعالة"],
+    },
+    {
+        mainCategory: "العاملون",
+        subCategories: ["عدم وجود شهادات صحية", "تدني مستوى النظافة الشخصية", "ممارسة سلوكيات خاطئة"],
+    },
+    {
+        mainCategory: "المواد الغذائية",
+        subCategories: ["استخدام مواد أولية منتهية الصلاحية", "تخزين غير سليم للمواد الغذائية", "عدم وجود بطاقات تعريفية"],
+    },
 ];
