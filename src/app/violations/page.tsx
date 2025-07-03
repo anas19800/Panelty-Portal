@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { MoreHorizontal, PlusCircle, Trash2 } from 'lucide-react';
+import { FilePenLine, MoreHorizontal, PlusCircle, Trash2 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Violation } from '@/lib/mock-data';
@@ -169,13 +169,17 @@ export default function ViolationsPage() {
                             </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>إجراءات</DropdownMenuLabel>
-                            <DropdownMenuItem disabled>عرض التفاصيل</DropdownMenuItem>
-                            <DropdownMenuItem disabled>تعديل</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleDeleteClick(violation)} className="text-destructive focus:text-destructive">
-                                <Trash2 className="ml-2 h-4 w-4" />
-                                حذف
-                            </DropdownMenuItem>
+                              <DropdownMenuLabel>إجراءات</DropdownMenuLabel>
+                              <DropdownMenuItem asChild>
+                                <Link href={`/violations/${violation.id}/edit`}>
+                                  <FilePenLine className="ml-2 h-4 w-4" />
+                                  تعديل
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleDeleteClick(violation)} className="text-destructive focus:text-destructive">
+                                  <Trash2 className="ml-2 h-4 w-4" />
+                                  حذف
+                              </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
                         </TableCell>
