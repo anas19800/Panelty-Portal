@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { format } from 'date-fns';
+import { format, addDays } from 'date-fns';
 import { CalendarIcon, Upload } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -88,6 +88,7 @@ function NewViolationPageContent() {
   const watchBrand = form.watch('brand');
   const watchBranchId = form.watch('branchId');
   const watchCategory = form.watch('category');
+  const watchViolationDate = form.watch('violationDate');
 
   const availableBranches = allBranches.filter(b => b.region === watchRegion && b.brand === watchBrand);
   const availableSubCategories = categories.find(c => c.mainCategoryCode === watchCategory)?.subCategories || [];
@@ -103,6 +104,12 @@ function NewViolationPageContent() {
   useEffect(() => { form.resetField('brand', { defaultValue: '' }); form.resetField('branchId', { defaultValue: '' }); }, [watchRegion, form]);
   useEffect(() => { form.resetField('branchId', { defaultValue: '' }); }, [watchBrand, form]);
   useEffect(() => { form.resetField('subCategory', { defaultValue: '' }); }, [watchCategory, form]);
+
+  useEffect(() => {
+    if (watchViolationDate) {
+      form.setValue('lastObjectionDate', addDays(watchViolationDate, 15));
+    }
+  }, [watchViolationDate, form]);
 
   async function onSubmit(data: ViolationFormValues) {
     try {
