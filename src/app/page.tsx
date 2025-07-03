@@ -1,3 +1,6 @@
+'use client';
+
+import { useState, useEffect, useMemo } from 'react';
 import {
   Card,
   CardContent,
@@ -20,11 +23,90 @@ import {
   Gavel,
   LineChart,
 } from 'lucide-react';
-import { recentViolations } from '@/lib/mock-data';
+import { violations as initialViolations, Violation, Objection, objections as initialObjections } from '@/lib/mock-data';
 import { PageHeader } from '@/components/page-header';
 import { DashboardCharts } from '@/components/dashboard-charts';
+import { Skeleton } from '@/components/ui/skeleton';
+
 
 export default function Dashboard() {
+  const [violations, setViolations] = useState<Violation[]>([]);
+  const [objections, setObjections] = useState<Objection[]>([]);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  useEffect(() => {
+    const storedViolations = localStorage.getItem('violations');
+    const storedObjections = localStorage.getItem('objections');
+    setViolations(storedViolations ? JSON.parse(storedViolations) : initialViolations);
+    setObjections(storedObjections ? JSON.parse(storedObjections) : initialObjections);
+    setIsLoaded(true);
+  }, []);
+
+  const dashboardStats = useMemo(() => {
+    const totalViolations = violations.length;
+    const totalFines = violations.reduce((sum, v) => sum + v.amount, 0);
+    const openObjections = objections.filter(o => o.status === 'قيد المراجعة').length;
+    const allObjectionsCount = objections.length;
+    
+    const categoryCounts = violations.reduce((acc, v) => {
+        const category = v.subCategory || 'غير محدد';
+        acc[category] = (acc[category] || 0) + 1;
+        return acc;
+    }, {} as Record<string, number>);
+    
+    const mostFrequentViolation = Object.keys(categoryCounts).length > 0
+        ? Object.keys(categoryCounts).reduce((a, b) => categoryCounts[a] > categoryCounts[b] ? a : b)
+        : 'لا يوجد';
+
+    return {
+      totalViolations,
+      totalFines,
+      openObjections,
+      allObjectionsCount,
+      mostFrequentViolation,
+    };
+  }, [violations, objections]);
+
+  const recentViolations = useMemo(() => {
+      return violations.slice(0, 5);
+  }, [violations]);
+
+  if (!isLoaded) {
+    return (
+      <div className="flex flex-col gap-6">
+        <PageHeader title="لوحة المعلومات" />
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+             <Card key={i}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <Skeleton className="h-5 w-24" />
+                    <Skeleton className="h-4 w-4" />
+                </CardHeader>
+                <CardContent>
+                    <Skeleton className="h-8 w-32" />
+                    <Skeleton className="h-4 w-48 mt-1" />
+                </CardContent>
+            </Card>
+          ))}
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+            <Card className="lg:col-span-4">
+                 <CardHeader><Skeleton className="h-8 w-48" /></CardHeader>
+                 <CardContent><Skeleton className="h-[300px] w-full" /></CardContent>
+            </Card>
+            <Card className="lg:col-span-3">
+                <CardHeader><Skeleton className="h-8 w-48" /></CardHeader>
+                <CardContent className="flex justify-center items-center"><Skeleton className="h-[300px] w-[300px] rounded-full" /></CardContent>
+            </Card>
+        </div>
+         <Card>
+            <CardHeader><Skeleton className="h-8 w-48" /></CardHeader>
+            <CardContent><Skeleton className="h-40 w-full" /></CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title="لوحة المعلومات" />
@@ -35,8 +117,8 @@ export default function Dashboard() {
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">1,234</div>
-            <p className="text-xs text-muted-foreground">+15% عن الشهر الماضي</p>
+            <div className="text-2xl font-bold">{dashboardStats.totalViolations}</div>
+            <p className="text-xs text-muted-foreground">مخالفة مسجلة في النظام</p>
           </CardContent>
         </Card>
         <Card>
@@ -46,19 +128,19 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              450,231.89 <span className="text-sm">ريال</span>
+              {dashboardStats.totalFines.toLocaleString('ar-SA')} <span className="text-sm">ريال</span>
             </div>
-            <p className="text-xs text-muted-foreground">+20.1% عن الشهر الماضي</p>
+            <p className="text-xs text-muted-foreground">قيمة جميع المخالفات المسجلة</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">اعتراضات مفتوحة</CardTitle>
+            <CardTitle className="text-sm font-medium">الاعتراضات</CardTitle>
             <Gavel className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">+72</div>
-            <p className="text-xs text-muted-foreground">5 قيد المراجعة</p>
+            <div className="text-2xl font-bold">+{dashboardStats.allObjectionsCount}</div>
+            <p className="text-xs text-muted-foreground">{dashboardStats.openObjections} قيد المراجعة</p>
           </CardContent>
         </Card>
         <Card>
@@ -67,14 +149,14 @@ export default function Dashboard() {
             <LineChart className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-xl font-bold">نظافة عامة</div>
+            <div className="text-xl font-bold">{dashboardStats.mostFrequentViolation}</div>
             <p className="text-xs text-muted-foreground">
-              +19% عن الشهر الماضي
+              الفئة الفرعية الأكثر تسجيلاً
             </p>
           </CardContent>
         </Card>
       </div>
-      <DashboardCharts />
+      <DashboardCharts violations={violations}/>
       <Card>
         <CardHeader>
           <CardTitle>أحدث المخالفات</CardTitle>
@@ -96,7 +178,7 @@ export default function Dashboard() {
             <TableBody>
               {recentViolations.map((violation) => (
                 <TableRow key={violation.id}>
-                  <TableCell className="font-medium">{violation.branch}</TableCell>
+                  <TableCell className="font-medium">{violation.branchName}</TableCell>
                   <TableCell>{violation.city}</TableCell>
                   <TableCell>{violation.date}</TableCell>
                   <TableCell>

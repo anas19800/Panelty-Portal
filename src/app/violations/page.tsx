@@ -1,3 +1,6 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
@@ -17,7 +20,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { MoreHorizontal, PlusCircle } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Trash2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,92 +28,188 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { violations } from '@/lib/mock-data';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { violations as initialViolations, Violation } from '@/lib/mock-data';
+import { useToast } from '@/hooks/use-toast';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function ViolationsPage() {
+  const { toast } = useToast();
+  const [violations, setViolations] = useState<Violation[]>([]);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [violationToDelete, setViolationToDelete] = useState<Violation | null>(null);
+
+  useEffect(() => {
+    try {
+      const storedViolations = localStorage.getItem('violations');
+      setViolations(
+        storedViolations ? JSON.parse(storedViolations) : initialViolations
+      );
+    } catch (error) {
+      console.error('Failed to load violations from localStorage', error);
+      setViolations(initialViolations);
+    } finally {
+      setIsLoaded(true);
+    }
+  }, []);
+
+  const handleDeleteClick = (violation: Violation) => {
+    setViolationToDelete(violation);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    if (violationToDelete) {
+      const updatedViolations = violations.filter(
+        (v) => v.id !== violationToDelete.id
+      );
+      setViolations(updatedViolations);
+      localStorage.setItem('violations', JSON.stringify(updatedViolations));
+      toast({ description: 'تم حذف المخالفة بنجاح.' });
+      setDeleteDialogOpen(false);
+      setViolationToDelete(null);
+    }
+  };
+
+  if (!isLoaded) {
+    return (
+       <div className="flex flex-col gap-6">
+        <PageHeader title="سجل المخالفات" />
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-4 w-72" />
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-40 w-full" />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader title="سجل المخالفات">
-        <Button asChild>
-          <Link href="/violations/new">
-            <PlusCircle className="mr-2 h-4 w-4" />
-            تسجيل مخالفة جديدة
-          </Link>
-        </Button>
-      </PageHeader>
-      <Card>
-        <CardHeader>
-          <CardTitle>جميع المخالفات</CardTitle>
-          <CardDescription>
-            قائمة بجميع مخالفات البلدية المسجلة على الفروع.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>رقم المخالفة</TableHead>
-                <TableHead>الفرع</TableHead>
-                <TableHead>المدينة</TableHead>
-                <TableHead>تاريخ الرصد</TableHead>
-                <TableHead>القيمة</TableHead>
-                <TableHead>الحالة</TableHead>
-                <TableHead>
-                  <span className="sr-only">Actions</span>
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {violations.map((violation) => (
-                <TableRow key={violation.id}>
-                  <TableCell className="font-medium">
-                    {violation.violationNumber}
-                  </TableCell>
-                  <TableCell>{violation.branchName}</TableCell>
-                  <TableCell>{violation.city}</TableCell>
-                  <TableCell>{violation.date}</TableCell>
-                  <TableCell>
-                    {violation.amount.toLocaleString('ar-SA', {
-                      style: 'currency',
-                      currency: 'SAR',
-                    })}
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={
-                        violation.status === 'مدفوعة'
-                          ? 'default'
-                          : violation.status === 'غير مدفوعة'
-                          ? 'destructive'
-                          : 'secondary'
-                      }
-                      className='bg-opacity-20 text-opacity-100'
-                    >
-                      {violation.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button aria-haspopup="true" size="icon" variant="ghost">
-                          <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">Toggle menu</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>إجراءات</DropdownMenuLabel>
-                        <DropdownMenuItem>عرض التفاصيل</DropdownMenuItem>
-                        <DropdownMenuItem>تعديل</DropdownMenuItem>
-                        <DropdownMenuItem>تسجيل اعتراض</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
+    <>
+      <div className="flex flex-col gap-6">
+        <PageHeader title="سجل المخالفات">
+          <Button asChild>
+            <Link href="/violations/new">
+              <PlusCircle className="mr-2 h-4 w-4" />
+              تسجيل مخالفة جديدة
+            </Link>
+          </Button>
+        </PageHeader>
+        <Card>
+          <CardHeader>
+            <CardTitle>جميع المخالفات</CardTitle>
+            <CardDescription>
+              قائمة بجميع مخالفات البلدية المسجلة على الفروع.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>رقم المخالفة</TableHead>
+                  <TableHead>الفرع</TableHead>
+                  <TableHead>تاريخ الرصد</TableHead>
+                  <TableHead>القيمة</TableHead>
+                  <TableHead>الحالة</TableHead>
+                  <TableHead>
+                    <span className="sr-only">Actions</span>
+                  </TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-    </div>
+              </TableHeader>
+              <TableBody>
+                {violations.map((violation) => (
+                  <TableRow key={violation.id}>
+                    <TableCell className="font-medium">
+                      {violation.violationNumber}
+                    </TableCell>
+                    <TableCell>{violation.branchName}</TableCell>
+                    <TableCell>{violation.date}</TableCell>
+                    <TableCell>
+                      {violation.amount.toLocaleString('ar-SA', {
+                        style: 'currency',
+                        currency: 'SAR',
+                      })}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={
+                          violation.status === 'مدفوعة'
+                            ? 'default'
+                            : violation.status === 'غير مدفوعة'
+                            ? 'destructive'
+                            : 'secondary'
+                        }
+                        className="bg-opacity-20 text-opacity-100"
+                      >
+                        {violation.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            aria-haspopup="true"
+                            size="icon"
+                            variant="ghost"
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                            <span className="sr-only">Toggle menu</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>إجراءات</DropdownMenuLabel>
+                          <DropdownMenuItem disabled>عرض التفاصيل</DropdownMenuItem>
+                          <DropdownMenuItem disabled>تعديل</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleDeleteClick(violation)}
+                           className="text-destructive focus:text-destructive">
+                            <Trash2 className="ml-2 h-4 w-4" />
+                            حذف
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle>
+            <AlertDialogDescription>
+              سيتم حذف المخالفة رقم "{violationToDelete?.violationNumber}" نهائياً. لا يمكن التراجع عن هذا الإجراء.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              حذف
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

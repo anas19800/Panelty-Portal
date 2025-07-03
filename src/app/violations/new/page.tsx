@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { format } from 'date-fns';
 import { CalendarIcon, Upload } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
@@ -47,7 +48,8 @@ import {
     branches as initialBranches,
     Branch,
     violationCategories as initialViolationCategories,
-    ViolationCategory
+    ViolationCategory,
+    Violation
 } from '@/lib/mock-data';
 
 const violationFormSchema = z.object({
@@ -67,6 +69,7 @@ type ViolationFormValues = z.infer<typeof violationFormSchema>;
 
 export default function NewViolationPage() {
   const { toast } = useToast();
+  const router = useRouter();
   const [branchDetails, setBranchDetails] = useState<Branch | null>(null);
 
   const [regions, setRegions] = useState<string[]>([]);
@@ -76,17 +79,23 @@ export default function NewViolationPage() {
   const [isDataLoaded, setIsDataLoaded] = useState(false);
 
   useEffect(() => {
-    const storedRegions = localStorage.getItem('regions');
-    const storedBrands = localStorage.getItem('brands');
-    const storedCategories = localStorage.getItem('violationCategories');
-    const storedBranches = localStorage.getItem('branches');
+    try {
+        const storedRegions = localStorage.getItem('regions');
+        const storedBrands = localStorage.getItem('brands');
+        const storedCategories = localStorage.getItem('violationCategories');
+        const storedBranches = localStorage.getItem('branches');
 
-    setRegions(storedRegions ? JSON.parse(storedRegions) : initialRegions);
-    setAllBrands(storedBrands ? JSON.parse(storedBrands) : initialBrands);
-    setAllBranches(storedBranches ? JSON.parse(storedBranches) : initialBranches);
-    setCategories(storedCategories ? JSON.parse(storedCategories) : initialViolationCategories);
-    setIsDataLoaded(true);
-  }, []);
+        setRegions(storedRegions ? JSON.parse(storedRegions) : initialRegions);
+        setAllBrands(storedBrands ? JSON.parse(storedBrands) : initialBrands);
+        setAllBranches(storedBranches ? JSON.parse(storedBranches) : initialBranches);
+        setCategories(storedCategories ? JSON.parse(storedCategories) : initialViolationCategories);
+    } catch (error) {
+        console.error('Failed to load data from localStorage', error);
+        toast({ variant: 'destructive', description: 'فشل تحميل البيانات الأساسية.'});
+    } finally {
+        setIsDataLoaded(true);
+    }
+  }, [toast]);
 
   const form = useForm<ViolationFormValues>({
     resolver: zodResolver(violationFormSchema),
@@ -128,13 +137,48 @@ export default function NewViolationPage() {
   }, [watchCategory, form]);
 
   function onSubmit(data: ViolationFormValues) {
-    console.log(data);
-    toast({
-      title: "نجاح",
-      description: "تم حفظ المخالفة بنجاح.",
-    });
-    form.reset();
-    setBranchDetails(null);
+    try {
+        const violations = JSON.parse(localStorage.getItem('violations') || '[]') as Violation[];
+        const branch = allBranches.find(b => b.id === data.branchId);
+
+        if (!branch) {
+            toast({ variant: 'destructive', description: 'الفرع المختار غير صحيح.' });
+            return;
+        }
+
+        const category = categories.find(c => c.mainCategoryCode === data.category);
+        const subCategory = category?.subCategories.find(sc => sc.code === data.subCategory);
+
+        const newViolation: Violation = {
+            id: `v${new Date().getTime()}`,
+            violationNumber: data.violationNumber,
+            paymentNumber: data.paymentNumber || '',
+            date: format(data.violationDate, 'yyyy-MM-dd'),
+            category: category?.mainCategory || 'غير محدد',
+            subCategory: subCategory?.name || 'غير محدد',
+            amount: data.fineAmount,
+            status: data.status === 'paid' ? 'مدفوعة' : data.status === 'unpaid' ? 'غير مدفوعة' : 'ملفية',
+            branchId: branch.id,
+            branchName: branch.name,
+            brand: branch.brand,
+            region: branch.region,
+            city: branch.city,
+        };
+        
+        const updatedViolations = [newViolation, ...violations];
+        localStorage.setItem('violations', JSON.stringify(updatedViolations));
+        
+        toast({
+          title: "نجاح",
+          description: "تم حفظ المخالفة بنجاح.",
+        });
+
+        router.push('/violations');
+
+    } catch (error) {
+        console.error('Failed to save violation:', error);
+        toast({ variant: 'destructive', description: 'حدث خطأ أثناء حفظ المخالفة.' });
+    }
   }
 
   if (!isDataLoaded) {
@@ -243,7 +287,7 @@ export default function NewViolationPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>رقم السداد (اختياري)</FormLabel>
-                      <FormControl><Input placeholder="e.g., SADAD-98765" {...field} /></FormControl>
+                      <FormControl><Input placeholder="e.g., SADAD-98765" {...field} value={field.value ?? ''} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -358,7 +402,7 @@ export default function NewViolationPage() {
               </CardContent>
             </Card>
             <div className="flex justify-end gap-2">
-                <Button variant="outline" type="button" onClick={() => {form.reset(); setBranchDetails(null);}}>إلغاء</Button>
+                <Button variant="outline" type="button" onClick={() => {form.reset(); setBranchDetails(null); router.back();}}>إلغاء</Button>
                 <Button type="submit">حفظ المخالفة</Button>
             </div>
           </div>
@@ -377,7 +421,7 @@ export default function NewViolationPage() {
                       <p><strong>مدير الفرع:</strong> {branchDetails.manager}</p>
                       <p><strong>المدير الإقليمي:</strong> {branchDetails.regionalManager}</p>
                     </div>
-                    <Button variant="outline" className="w-full" type="button" onClick={() => window.open(branchDetails.location, '_blank')}>عرض الموقع</Button>
+                    {branchDetails.location && <Button variant="outline" className="w-full" type="button" onClick={() => window.open(branchDetails.location, '_blank')}>عرض الموقع</Button>}
                   </>
                 ) : (
                   <p className="text-sm text-muted-foreground">الرجاء اختيار فرع لعرض معلوماته.</p>

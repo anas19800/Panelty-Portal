@@ -36,6 +36,17 @@ export type ViolationCategory = {
   subCategories: ViolationSubCategory[];
 };
 
+export type Objection = {
+  id: string;
+  number: string;
+  violationId: string;
+  violationNumber: string;
+  branch: string;
+  date: string;
+  status: 'مقبول' | 'قيد المراجعة' | 'مرفوض';
+  details: string;
+};
+
 export const regions = ["المنطقة الوسطى", "المنطقة الغربية", "المنطقة الشرقية"];
 export const brands = ["براند ألف", "براند باء", "براند جيم"];
 
@@ -48,20 +59,28 @@ export const branches: Branch[] = [
 ];
 
 export const violations: Violation[] = [
-  { id: 'v1', violationNumber: 'V-001', paymentNumber: 'P-001', date: '2024-05-01', category: 'نظافة', subCategory: 'نظافة عامة', amount: 500, status: 'مدفوعة', branchId: 'b1', branchName: 'فرع العليا', brand: 'براند ألف', region: 'المنطقة الوسطى', city: 'الرياض' },
-  { id: 'v2', violationNumber: 'V-002', paymentNumber: 'P-002', date: '2024-05-05', category: 'صحة', subCategory: 'شهادة صحية', amount: 1000, status: 'غير مدفوعة', branchId: 'b2', branchName: 'فرع التحلية', brand: 'براند ألف', region: 'المنطقة الغربية', city: 'جدة' },
-  { id: 'v3', violationNumber: 'V-003', paymentNumber: 'P-003', date: '2024-05-10', category: 'تراخيص', subCategory: 'رخصة بناء', amount: 2500, status: 'ملفية', branchId: 'b3', branchName: 'فرع الخبر', brand: 'براند باء', region: 'المنطقة الشرقية', city: 'الخبر' },
-  { id: 'v4', violationNumber: 'V-004', paymentNumber: 'P-004', date: '2024-05-12', category: 'نظافة', subCategory: 'مخلفات بناء', amount: 750, status: 'مدفوعة', branchId: 'b1', branchName: 'فرع العليا', brand: 'براند ألف', region: 'المنطقة الوسطى', city: 'الرياض' },
-  { id: 'v5', violationNumber: 'V-005', paymentNumber: 'P-005', date: '2024-05-15', category: 'صحة', subCategory: 'تخزين أغذية', amount: 1200, status: 'غير مدفوعة', branchId: 'b4', branchName: 'فرع الياسمين', brand: 'براند باء', region: 'المنطقة الوسطى', city: 'الرياض' },
+  { id: 'v1', violationNumber: 'V-001', paymentNumber: 'P-001', date: '2024-05-01', category: 'متطلبات الموقع والمبنى', subCategory: 'عدم ملاءمة الموقع', amount: 500, status: 'مدفوعة', branchId: 'b1', branchName: 'فرع العليا', brand: 'براند ألف', region: 'المنطقة الوسطى', city: 'الرياض' },
+  { id: 'v2', violationNumber: 'V-002', paymentNumber: 'P-002', date: '2024-05-05', category: 'العاملون', subCategory: 'تدني مستوى النظافة الشخصية', amount: 1000, status: 'غير مدفوعة', branchId: 'b2', branchName: 'فرع التحلية', brand: 'براند ألف', region: 'المنطقة الغربية', city: 'جدة' },
+  { id: 'v3', violationNumber: 'V-003', paymentNumber: 'P-003', date: '2024-05-10', category: 'المواد الغذائية', subCategory: 'تخزين غير سليم للمواد الغذائية', amount: 2500, status: 'ملفية', branchId: 'b3', branchName: 'فرع الخبر', brand: 'براند باء', region: 'المنطقة الشرقية', city: 'الخبر' },
+  { id: 'v4', violationNumber: 'V-004', paymentNumber: 'P-004', date: '2024-05-12', category: 'التجهيزات الداخلية', subCategory: 'عدم كفاءة التهوية', amount: 750, status: 'مدفوعة', branchId: 'b1', branchName: 'فرع العليا', brand: 'براند ألف', region: 'المنطقة الوسطى', city: 'الرياض' },
+  { id: 'v5', violationNumber: 'V-005', paymentNumber: 'P-005', date: '2024-05-15', category: 'العاملون', subCategory: 'عدم وجود شهادات صحية', amount: 1200, status: 'غير مدفوعة', branchId: 'b4', branchName: 'فرع الياسمين', brand: 'براند باء', region: 'المنطقة الوسطى', city: 'الرياض' },
 ];
 
-export const recentViolations = [
-  { id: 'v5', branch: 'فرع الياسمين', city: 'الرياض', date: '2024-05-15', amount: 1200, status: 'غير مدفوعة' },
-  { id: 'v4', branch: 'فرع العليا', city: 'الرياض', date: '2024-05-12', amount: 750, status: 'مدفوعة' },
-  { id: 'v3', branch: 'فرع الخبر', city: 'الخبر', date: '2024-05-10', amount: 2500, status: 'ملفية' },
-  { id: 'v2', branch: 'فرع التحلية', city: 'جدة', date: '2024-05-05', amount: 1000, status: 'غير مدفوعة' },
-  { id: 'v1', branch: 'فرع العليا', city: 'الرياض', date: '2024-05-01', amount: 500, status: 'مدفوعة' },
+export const objections: Objection[] = [
+    { id: 'o1', number: 'OBJ-001', violationId: 'v3', violationNumber: 'V-003', branch: 'فرع الخبر', date: '2024-05-12', status: 'مقبول', details: 'الاعتراض الأول' },
+    { id: 'o2', number: 'OBJ-002', violationId: 'v5', violationNumber: 'V-005', branch: 'فرع الياسمين', date: '2024-05-18', status: 'قيد المراجعة', details: 'الاعتراض الثاني' },
+    { id: 'o3', number: 'OBJ-003', violationId: 'v2', violationNumber: 'V-002', branch: 'فرع التحلية', date: '2024-05-20', status: 'مرفوض', details: 'الاعتراض الثالث' },
 ];
+
+export const recentViolations = violations.slice(0,5).map(v => ({
+    id: v.id,
+    branch: v.branchName,
+    city: v.city,
+    date: v.date,
+    amount: v.amount,
+    status: v.status
+}));
+
 
 export const violationsByBrand = [
   { brand: 'براند ألف', violations: 280, fill: 'var(--color-chart-2)' },
