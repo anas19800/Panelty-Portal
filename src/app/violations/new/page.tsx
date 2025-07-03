@@ -44,7 +44,7 @@ import { cn } from '@/lib/utils';
 import {
     regions as initialRegions,
     brands as initialBrands,
-    branches,
+    branches as initialBranches,
     Branch,
     violationCategories as initialViolationCategories,
     ViolationCategory
@@ -71,6 +71,7 @@ export default function NewViolationPage() {
 
   const [regions, setRegions] = useState<string[]>([]);
   const [allBrands, setAllBrands] = useState<string[]>([]);
+  const [allBranches, setAllBranches] = useState<Branch[]>([]);
   const [categories, setCategories] = useState<ViolationCategory[]>([]);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
 
@@ -78,9 +79,11 @@ export default function NewViolationPage() {
     const storedRegions = localStorage.getItem('regions');
     const storedBrands = localStorage.getItem('brands');
     const storedCategories = localStorage.getItem('violationCategories');
+    const storedBranches = localStorage.getItem('branches');
 
     setRegions(storedRegions ? JSON.parse(storedRegions) : initialRegions);
     setAllBrands(storedBrands ? JSON.parse(storedBrands) : initialBrands);
+    setAllBranches(storedBranches ? JSON.parse(storedBranches) : initialBranches);
     setCategories(storedCategories ? JSON.parse(storedCategories) : initialViolationCategories);
     setIsDataLoaded(true);
   }, []);
@@ -99,17 +102,17 @@ export default function NewViolationPage() {
   const watchCategory = form.watch('category');
 
   const availableBrands = allBrands;
-  const availableBranches = branches.filter(b => b.region === watchRegion && b.brand === watchBrand);
+  const availableBranches = allBranches.filter(b => b.region === watchRegion && b.brand === watchBrand);
   const availableSubCategories = categories.find(c => c.mainCategoryCode === watchCategory)?.subCategories || [];
 
   useEffect(() => {
     if (watchBranchId) {
-      const details = branches.find(b => b.id === watchBranchId);
+      const details = allBranches.find(b => b.id === watchBranchId);
       setBranchDetails(details || null);
     } else {
       setBranchDetails(null);
     }
-  }, [watchBranchId]);
+  }, [watchBranchId, allBranches]);
 
   useEffect(() => {
     form.resetField('brand', { defaultValue: '' });
