@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -42,9 +41,15 @@ import {
 } from '@/components/ui/form';
 import { useToast } from "@/hooks/use-toast";
 import { cn } from '@/lib/utils';
-import { regions, branches, Branch } from '@/lib/mock-data';
+import {
+    regions as initialRegions,
+    brands as initialBrands,
+    branches,
+    Branch,
+    violationCategories as initialViolationCategories,
+    ViolationCategory
+} from '@/lib/mock-data';
 
-// Zod schema for form validation
 const violationFormSchema = z.object({
   region: z.string({ required_error: "الرجاء اختيار منطقة." }),
   brand: z.string({ required_error: "الرجاء اختيار براند." }),
@@ -53,8 +58,8 @@ const violationFormSchema = z.object({
   paymentNumber: z.string().optional(),
   violationDate: z.date({ required_error: "الرجاء تحديد تاريخ الرصد." }),
   fineAmount: z.coerce.number().positive("يجب أن تكون قيمة المخالفة أكبر من صفر."),
-  category: z.string({ required_error: "الرجاء اختيار فئة." }),
-  subCategory: z.string().min(1, "الرجاء إدخال الفئة الفرعية."),
+  category: z.string({ required_error: "الرجاء اختيار الفئة الرئيسية." }),
+  subCategory: z.string({ required_error: "الرجاء اختيار الفئة الفرعية." }),
   status: z.enum(["paid", "unpaid", "filed"], { required_error: "الرجاء تحديد حالة المخالفة." }),
 });
 
@@ -64,21 +69,38 @@ export default function NewViolationPage() {
   const { toast } = useToast();
   const [branchDetails, setBranchDetails] = useState<Branch | null>(null);
 
+  const [regions, setRegions] = useState<string[]>([]);
+  const [allBrands, setAllBrands] = useState<string[]>([]);
+  const [categories, setCategories] = useState<ViolationCategory[]>([]);
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
+
+  useEffect(() => {
+    const storedRegions = localStorage.getItem('regions');
+    const storedBrands = localStorage.getItem('brands');
+    const storedCategories = localStorage.getItem('violationCategories');
+
+    setRegions(storedRegions ? JSON.parse(storedRegions) : initialRegions);
+    setAllBrands(storedBrands ? JSON.parse(storedBrands) : initialBrands);
+    setCategories(storedCategories ? JSON.parse(storedCategories) : initialViolationCategories);
+    setIsDataLoaded(true);
+  }, []);
+
   const form = useForm<ViolationFormValues>({
     resolver: zodResolver(violationFormSchema),
     defaultValues: {
       status: 'unpaid',
       paymentNumber: '',
-      subCategory: ''
     },
   });
 
   const watchRegion = form.watch('region');
   const watchBrand = form.watch('brand');
   const watchBranchId = form.watch('branchId');
+  const watchCategory = form.watch('category');
 
-  const availableBrands = Array.from(new Set(branches.filter(b => b.region === watchRegion).map(b => b.brand)));
+  const availableBrands = allBrands;
   const availableBranches = branches.filter(b => b.region === watchRegion && b.brand === watchBrand);
+  const availableSubCategories = categories.find(c => c.mainCategoryCode === watchCategory)?.subCategories || [];
 
   useEffect(() => {
     if (watchBranchId) {
@@ -89,22 +111,18 @@ export default function NewViolationPage() {
     }
   }, [watchBranchId]);
 
-  // Reset brand and branch when region changes
   useEffect(() => {
-    if (form.getValues('brand')) {
-      form.resetField('brand');
-    }
-    if (form.getValues('branchId')) {
-      form.resetField('branchId');
-    }
+    form.resetField('brand', { defaultValue: '' });
+    form.resetField('branchId', { defaultValue: '' });
   }, [watchRegion, form]);
 
-  // Reset branch when brand changes
   useEffect(() => {
-    if (form.getValues('branchId')) {
-      form.resetField('branchId');
-    }
+    form.resetField('branchId', { defaultValue: '' });
   }, [watchBrand, form]);
+  
+  useEffect(() => {
+    form.resetField('subCategory', { defaultValue: '' });
+  }, [watchCategory, form]);
 
   function onSubmit(data: ViolationFormValues) {
     console.log(data);
@@ -113,6 +131,20 @@ export default function NewViolationPage() {
       description: "تم حفظ المخالفة بنجاح.",
     });
     form.reset();
+    setBranchDetails(null);
+  }
+
+  if (!isDataLoaded) {
+      return (
+         <div className="flex flex-col gap-6">
+            <PageHeader title="تسجيل مخالفة جديدة" />
+            <div className="grid gap-6 lg:grid-cols-3">
+                <div className="lg:col-span-2 flex flex-col gap-6">
+                    <Card><CardHeader><CardTitle>جاري تحميل البيانات...</CardTitle></CardHeader></Card>
+                </div>
+            </div>
+        </div>
+      )
   }
 
   return (
@@ -256,9 +288,7 @@ export default function NewViolationPage() {
                            <SelectTrigger><SelectValue placeholder="اختر فئة" /></SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                           <SelectItem value="hygiene">نظافة</SelectItem>
-                           <SelectItem value="health">صحة</SelectItem>
-                           <SelectItem value="license">تراخيص</SelectItem>
+                           {categories.map(c => <SelectItem key={c.mainCategoryCode} value={c.mainCategoryCode}>{c.mainCategory}</SelectItem>)}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -271,7 +301,14 @@ export default function NewViolationPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>الفئة الفرعية</FormLabel>
-                      <FormControl><Input placeholder="e.g., نظافة عامة" {...field} /></FormControl>
+                       <Select onValueChange={field.onChange} value={field.value || ''} disabled={!watchCategory}>
+                            <FormControl>
+                               <SelectTrigger><SelectValue placeholder="اختر فئة فرعية" /></SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                               {availableSubCategories.map(sc => <SelectItem key={sc.code} value={sc.code}>{`${sc.code} - ${sc.name}`}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -318,7 +355,7 @@ export default function NewViolationPage() {
               </CardContent>
             </Card>
             <div className="flex justify-end gap-2">
-                <Button variant="outline" type="button" onClick={() => form.reset()}>إلغاء</Button>
+                <Button variant="outline" type="button" onClick={() => {form.reset(); setBranchDetails(null);}}>إلغاء</Button>
                 <Button type="submit">حفظ المخالفة</Button>
             </div>
           </div>
@@ -350,5 +387,3 @@ export default function NewViolationPage() {
     </div>
   );
 }
-
-    

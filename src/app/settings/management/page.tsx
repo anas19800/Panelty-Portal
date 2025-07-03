@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,6 +17,7 @@ import {
   ViolationSubCategory,
 } from '@/lib/mock-data';
 import { useToast } from '@/hooks/use-toast';
+import { Skeleton } from '@/components/ui/skeleton';
 
 type SubCategoryManagerProps = {
   mainCategory: string;
@@ -70,14 +71,49 @@ function SubCategoryManager({ mainCategory, subCategories, onAddSubCategory, onD
 
 export default function ManagementPage() {
   const { toast } = useToast();
-  const [regions, setRegions] = useState(initialRegions);
-  const [brands, setBrands] = useState(initialBrands);
-  const [categories, setCategories] = useState<ViolationCategory[]>(initialViolationCategories);
+  const [regions, setRegions] = useState<string[]>([]);
+  const [brands, setBrands] = useState<string[]>([]);
+  const [categories, setCategories] = useState<ViolationCategory[]>([]);
+  const [isLoaded, setIsLoaded] = useState(false);
   
   const [newRegion, setNewRegion] = useState('');
   const [newBrand, setNewBrand] = useState('');
   const [newMainCategory, setNewMainCategory] = useState('');
   const [newMainCategoryCode, setNewMainCategoryCode] = useState('');
+
+  useEffect(() => {
+    try {
+      const storedRegions = localStorage.getItem('regions');
+      const storedBrands = localStorage.getItem('brands');
+      const storedCategories = localStorage.getItem('violationCategories');
+      
+      setRegions(storedRegions ? JSON.parse(storedRegions) : initialRegions);
+      setBrands(storedBrands ? JSON.parse(storedBrands) : initialBrands);
+      setCategories(storedCategories ? JSON.parse(storedCategories) : initialViolationCategories);
+    } catch (error) {
+      console.error("Failed to load data from localStorage", error);
+      toast({ variant: 'destructive', description: 'فشل في تحميل البيانات من المتصفح.' });
+      setRegions(initialRegions);
+      setBrands(initialBrands);
+      setCategories(initialViolationCategories);
+    } finally {
+        setIsLoaded(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isLoaded) {
+        try {
+            localStorage.setItem('regions', JSON.stringify(regions));
+            localStorage.setItem('brands', JSON.stringify(brands));
+            localStorage.setItem('violationCategories', JSON.stringify(categories));
+        } catch (error) {
+            console.error("Failed to save data to localStorage", error);
+            toast({ variant: 'destructive', description: 'فشل في حفظ البيانات في المتصفح.' });
+        }
+    }
+  }, [regions, brands, categories, isLoaded, toast]);
+
 
   const handleAddRegion = () => {
     if (newRegion.trim() !== '') {
@@ -109,6 +145,10 @@ export default function ManagementPage() {
 
   const handleAddMainCategory = () => {
     if (newMainCategory.trim() !== '' && newMainCategoryCode.trim() !== '') {
+      if (categories.some(c => c.mainCategoryCode === newMainCategoryCode.trim())) {
+        toast({ variant: "destructive", description: "رقم الفئة الرئيسية موجود بالفعل." });
+        return;
+      }
       setCategories([...categories, { mainCategoryCode: newMainCategoryCode.trim(), mainCategory: newMainCategory.trim(), subCategories: [] }]);
       setNewMainCategory('');
       setNewMainCategoryCode('');
@@ -126,6 +166,10 @@ export default function ManagementPage() {
      if (subCategory.name.trim() !== '' && subCategory.code.trim() !== '') {
         const updatedCategories = categories.map(c => {
             if (c.mainCategory === mainCategory) {
+                if(c.subCategories.some(sc => sc.code === subCategory.code.trim())) {
+                    toast({ variant: "destructive", description: "رقم الفئة الفرعية موجود بالفعل." });
+                    return c;
+                }
                 return { ...c, subCategories: [...c.subCategories, { code: subCategory.code.trim(), name: subCategory.name.trim() }] };
             }
             return c;
@@ -145,6 +189,23 @@ export default function ManagementPage() {
     toast({ description: "تم حذف الفئة الفرعية." });
   };
 
+  if (!isLoaded) {
+    return (
+      <div className="flex flex-col gap-6">
+        <PageHeader title="إدارة بيانات النظام" />
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-4 w-72" />
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-40 w-full" />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -238,7 +299,7 @@ export default function ManagementPage() {
                          <Input value={newMainCategory} onChange={(e) => setNewMainCategory(e.target.value)} placeholder="اسم الفئة الرئيسية الجديدة" className="flex-1" />
                         <Button onClick={handleAddMainCategory}><PlusCircle className="mr-2 h-4 w-4" /> إضافة فئة رئيسية</Button>
                     </div>
-                     <Accordion type="multiple" className="w-full" defaultValue={[categories[0]?.mainCategory]}>
+                     <Accordion type="multiple" className="w-full" defaultValue={categories.length > 0 ? [categories[0].mainCategory] : []}>
                         {categories.map((category) => (
                            <AccordionItem value={category.mainCategory} key={category.mainCategory}>
                                 <div className="flex items-center w-full hover:bg-muted/50 rounded-md">
