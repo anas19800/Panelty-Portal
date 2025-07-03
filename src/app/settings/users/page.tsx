@@ -5,7 +5,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { MoreHorizontal, PlusCircle, Trash2 } from 'lucide-react';
-
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,7 +18,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { users as initialUsers, User } from '@/lib/mock-data';
+import { User } from '@/lib/mock-data';
+import { db } from '@/lib/firebase';
+import { collection, getDocs, doc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 
 const userSchema = z.object({
   name: z.string().min(1, 'الاسم مطلوب.'),
@@ -43,28 +44,20 @@ export default function UsersPage() {
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
 
   useEffect(() => {
-    try {
-      const storedUsers = localStorage.getItem('users');
-      setUsers(storedUsers ? JSON.parse(storedUsers) : initialUsers);
-    } catch (error) {
-      console.error('Failed to load users from localStorage', error);
-      toast({ variant: 'destructive', description: 'فشل في تحميل بيانات المستخدمين.' });
-      setUsers(initialUsers);
-    } finally {
-      setIsLoaded(true);
-    }
-  }, [toast]);
-
-  useEffect(() => {
-    if (isLoaded) {
+    async function fetchUsers() {
       try {
-        localStorage.setItem('users', JSON.stringify(users));
+        const querySnapshot = await getDocs(collection(db, "users"));
+        const usersData = querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })) as User[];
+        setUsers(usersData);
       } catch (error) {
-        console.error('Failed to save users to localStorage', error);
-        toast({ variant: 'destructive', description: 'فشل في حفظ بيانات المستخدمين.' });
+        console.error('Failed to load users from Firestore', error);
+        toast({ variant: 'destructive', description: 'فشل في تحميل بيانات المستخدمين.' });
+      } finally {
+        setIsLoaded(true);
       }
     }
-  }, [users, isLoaded, toast]);
+    fetchUsers();
+  }, [toast]);
 
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userSchema),
@@ -81,69 +74,64 @@ export default function UsersPage() {
     }
   }, [editingUser, dialogOpen, form]);
 
-  const handleAddNew = () => {
-    setEditingUser(null);
-    setDialogOpen(true);
-  };
+  const handleAddNew = () => { setEditingUser(null); setDialogOpen(true); };
+  const handleEdit = (user: User) => { setEditingUser(user); setDialogOpen(true); };
+  const handleDeleteClick = (user: User) => { setUserToDelete(user); setDeleteDialogOpen(true); };
 
-  const handleEdit = (user: User) => {
-    setEditingUser(user);
-    setDialogOpen(true);
-  };
-
-  const handleDeleteClick = (user: User) => {
-    setUserToDelete(user);
-    setDeleteDialogOpen(true);
-  };
-
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (userToDelete) {
-      setUsers(users.filter((u) => u.id !== userToDelete.id));
-      toast({ description: 'تم حذف المستخدم بنجاح.' });
-      setDeleteDialogOpen(false);
-      setUserToDelete(null);
+      try {
+        await deleteDoc(doc(db, "users", userToDelete.id));
+        setUsers(users.filter((u) => u.id !== userToDelete.id));
+        toast({ description: 'تم حذف المستخدم بنجاح.' });
+      } catch (error) {
+        toast({ variant: 'destructive', description: 'فشل في حذف المستخدم.' });
+      } finally {
+        setDeleteDialogOpen(false);
+        setUserToDelete(null);
+      }
     }
   };
   
-  const handleToggleStatus = (user: User) => {
-    setUsers(users.map(u => u.id === user.id ? { ...u, status: u.status === 'نشط' ? 'غير نشط' : 'نشط' } : u));
-    toast({ description: `تم تغيير حالة المستخدم ${user.name}.` });
+  const handleToggleStatus = async (user: User) => {
+    const newStatus = user.status === 'نشط' ? 'غير نشط' : 'نشط';
+    try {
+        const userRef = doc(db, "users", user.id);
+        await updateDoc(userRef, { status: newStatus });
+        setUsers(users.map(u => u.id === user.id ? { ...u, status: newStatus } : u));
+        toast({ description: `تم تغيير حالة المستخدم ${user.name}.` });
+    } catch (error) {
+        toast({ variant: 'destructive', description: 'فشل في تغيير حالة المستخدم.' });
+    }
   };
 
-  const onSubmit = (values: UserFormValues) => {
-    if (editingUser) {
-      setUsers(
-        users.map((u) =>
-          u.id === editingUser.id ? { ...editingUser, ...values } : u
-        )
-      );
-      toast({ description: 'تم تعديل بيانات المستخدم بنجاح.' });
-    } else {
-      const newUser: User = {
-        id: `u${new Date().getTime()}`,
-        status: 'نشط',
-        ...values,
-      };
-      setUsers([...users, newUser]);
-      toast({ description: 'تمت إضافة المستخدم بنجاح.' });
+  const onSubmit = async (values: UserFormValues) => {
+    // NOTE: This only adds a user to the Firestore 'users' collection.
+    // It does NOT create an authentication user that can log in.
+    // That requires Firebase Admin SDK on a backend.
+    try {
+      if (editingUser) {
+        const userRef = doc(db, "users", editingUser.id);
+        await updateDoc(userRef, values);
+        setUsers(users.map((u) => u.id === editingUser.id ? { ...editingUser, ...values } : u));
+        toast({ description: 'تم تعديل بيانات المستخدم بنجاح.' });
+      } else {
+        const newUserDoc = { ...values, status: 'نشط' as const };
+        const docRef = await addDoc(collection(db, "users"), newUserDoc);
+        setUsers([...users, { ...newUserDoc, id: docRef.id }]);
+        toast({ description: 'تمت إضافة المستخدم بنجاح.' });
+      }
+      setDialogOpen(false);
+    } catch (error) {
+      toast({ variant: 'destructive', description: 'فشل في حفظ بيانات المستخدم.' });
     }
-    setDialogOpen(false);
   };
 
   if (!isLoaded) {
     return (
       <div className="flex flex-col gap-6">
         <PageHeader title="إدارة المستخدمين والصلاحيات" />
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-8 w-48" />
-            <Skeleton className="h-4 w-72" />
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-40 w-full" />
-          </CardContent>
-        </Card>
+        <Card><CardHeader><Skeleton className="h-8 w-48" /><Skeleton className="h-4 w-72" /></CardHeader><CardContent><Skeleton className="h-10 w-full" /><Skeleton className="h-40 w-full" /></CardContent></Card>
       </div>
     );
   }
@@ -152,60 +140,28 @@ export default function UsersPage() {
     <>
       <div className="flex flex-col gap-6">
         <PageHeader title="إدارة المستخدمين والصلاحيات">
-          <Button onClick={handleAddNew}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            إضافة مستخدم
-          </Button>
+          <Button onClick={handleAddNew}><PlusCircle className="mr-2 h-4 w-4" /> إضافة مستخدم</Button>
         </PageHeader>
         <Card>
-          <CardHeader>
-            <CardTitle>قائمة المستخدمين</CardTitle>
-            <CardDescription>
-              إدارة حسابات المستخدمين والتحكم في صلاحياتهم.
-            </CardDescription>
-          </CardHeader>
+          <CardHeader><CardTitle>قائمة المستخدمين</CardTitle><CardDescription>إدارة حسابات المستخدمين والتحكم في صلاحياتهم.</CardDescription></CardHeader>
           <CardContent>
             <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>الاسم</TableHead>
-                  <TableHead>البريد الإلكتروني</TableHead>
-                  <TableHead>الدور</TableHead>
-                  <TableHead>الحالة</TableHead>
-                  <TableHead>
-                    <span className="sr-only">Actions</span>
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
+              <TableHeader><TableRow><TableHead>الاسم</TableHead><TableHead>البريد الإلكتروني</TableHead><TableHead>الدور</TableHead><TableHead>الحالة</TableHead><TableHead><span className="sr-only">Actions</span></TableHead></TableRow></TableHeader>
               <TableBody>
                 {users.map((user) => (
                   <TableRow key={user.id}>
                     <TableCell className="font-medium">{user.name}</TableCell>
                     <TableCell>{user.email}</TableCell>
                     <TableCell>{user.role}</TableCell>
-                    <TableCell>
-                      <Badge variant={user.status === 'نشط' ? 'default' : 'outline'}>
-                        {user.status}
-                      </Badge>
-                    </TableCell>
+                    <TableCell><Badge variant={user.status === 'نشط' ? 'default' : 'outline'}>{user.status}</Badge></TableCell>
                     <TableCell>
                        <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button aria-haspopup="true" size="icon" variant="ghost">
-                            <MoreHorizontal className="h-4 w-4" />
-                            <span className="sr-only">Toggle menu</span>
-                          </Button>
-                        </DropdownMenuTrigger>
+                        <DropdownMenuTrigger asChild><Button aria-haspopup="true" size="icon" variant="ghost"><MoreHorizontal className="h-4 w-4" /><span className="sr-only">Toggle menu</span></Button></DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>إجراءات</DropdownMenuLabel>
                           <DropdownMenuItem onClick={() => handleEdit(user)}>تعديل</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleToggleStatus(user)}>
-                            {user.status === 'نشط' ? 'تعطيل المستخدم' : 'تفعيل المستخدم'}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleDeleteClick(user)}>
-                            <Trash2 className="ml-2 h-4 w-4" />
-                            حذف
-                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleToggleStatus(user)}>{user.status === 'نشط' ? 'تعطيل المستخدم' : 'تفعيل المستخدم'}</DropdownMenuItem>
+                          <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleDeleteClick(user)}><Trash2 className="ml-2 h-4 w-4" />حذف</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
@@ -216,86 +172,23 @@ export default function UsersPage() {
           </CardContent>
         </Card>
       </div>
-
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>
-              {editingUser ? 'تعديل بيانات المستخدم' : 'إضافة مستخدم جديد'}
-            </DialogTitle>
-            <DialogDescription>
-              أدخل تفاصيل المستخدم والصلاحيات الممنوحة له.
-            </DialogDescription>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>{editingUser ? 'تعديل بيانات المستخدم' : 'إضافة مستخدم جديد'}</DialogTitle><DialogDescription>أدخل تفاصيل المستخدم والصلاحيات الممنوحة له.</DialogDescription></DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>الاسم الكامل</FormLabel>
-                    <FormControl>
-                      <Input placeholder="مثال: عبدالله الصالح" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>البريد الإلكتروني</FormLabel>
-                    <FormControl>
-                      <Input type="email" placeholder="user@example.com" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="role"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>الدور</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="اختر دوراً للمستخدم" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {roles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>إلغاء</Button>
-                <Button type="submit">حفظ</Button>
-              </DialogFooter>
+              <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>الاسم الكامل</FormLabel><FormControl><Input placeholder="مثال: عبدالله الصالح" {...field} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={form.control} name="email" render={({ field }) => (<FormItem><FormLabel>البريد الإلكتروني</FormLabel><FormControl><Input type="email" placeholder="user@example.com" {...field} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={form.control} name="role" render={({ field }) => (<FormItem><FormLabel>الدور</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="اختر دوراً للمستخدم" /></SelectTrigger></FormControl><SelectContent>{roles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
+              <DialogFooter><Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>إلغاء</Button><Button type="submit">حفظ</Button></DialogFooter>
             </form>
           </Form>
         </DialogContent>
       </Dialog>
-      
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle>
-            <AlertDialogDescription>
-              سيتم حذف المستخدم "{userToDelete?.name}" نهائياً. لا يمكن التراجع عن هذا الإجراء.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>إلغاء</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive hover:bg-destructive/90">حذف</AlertDialogAction>
-          </AlertDialogFooter>
+          <AlertDialogHeader><AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle><AlertDialogDescription>سيتم حذف المستخدم "{userToDelete?.name}" نهائياً. لا يمكن التراجع عن هذا الإجراء.</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogFooter><AlertDialogCancel>إلغاء</AlertDialogCancel><AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive hover:bg-destructive/90">حذف</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </>

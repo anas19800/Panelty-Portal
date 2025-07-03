@@ -10,47 +10,18 @@ import { useRouter } from 'next/navigation';
 
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Calendar } from '@/components/ui/calendar';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import {
-    Form,
-    FormControl,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
-} from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from "@/hooks/use-toast";
 import { cn } from '@/lib/utils';
-import {
-    regions as initialRegions,
-    brands as initialBrands,
-    branches as initialBranches,
-    Branch,
-    violationCategories as initialViolationCategories,
-    ViolationCategory,
-    Violation
-} from '@/lib/mock-data';
+import { Branch, ViolationCategory, Violation } from '@/lib/mock-data';
+import { db } from '@/lib/firebase';
+import { collection, getDocs, addDoc } from 'firebase/firestore';
 
 const violationFormSchema = z.object({
   region: z.string({ required_error: "الرجاء اختيار منطقة." }),
@@ -66,43 +37,47 @@ const violationFormSchema = z.object({
 });
 
 type ViolationFormValues = z.infer<typeof violationFormSchema>;
+type Region = { id: string, name: string };
+type Brand = { id: string, name: string };
 
 export default function NewViolationPage() {
   const { toast } = useToast();
   const router = useRouter();
   const [branchDetails, setBranchDetails] = useState<Branch | null>(null);
 
-  const [regions, setRegions] = useState<string[]>([]);
-  const [allBrands, setAllBrands] = useState<string[]>([]);
+  const [regions, setRegions] = useState<Region[]>([]);
+  const [allBrands, setAllBrands] = useState<Brand[]>([]);
   const [allBranches, setAllBranches] = useState<Branch[]>([]);
   const [categories, setCategories] = useState<ViolationCategory[]>([]);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
 
   useEffect(() => {
-    try {
-        const storedRegions = localStorage.getItem('regions');
-        const storedBrands = localStorage.getItem('brands');
-        const storedCategories = localStorage.getItem('violationCategories');
-        const storedBranches = localStorage.getItem('branches');
+    async function fetchData() {
+        try {
+            const regionsSnapshot = await getDocs(collection(db, 'regions'));
+            setRegions(regionsSnapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name })));
+            
+            const brandsSnapshot = await getDocs(collection(db, 'brands'));
+            setAllBrands(brandsSnapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name })));
 
-        setRegions(storedRegions ? JSON.parse(storedRegions) : initialRegions);
-        setAllBrands(storedBrands ? JSON.parse(storedBrands) : initialBrands);
-        setAllBranches(storedBranches ? JSON.parse(storedBranches) : initialBranches);
-        setCategories(storedCategories ? JSON.parse(storedCategories) : initialViolationCategories);
-    } catch (error) {
-        console.error('Failed to load data from localStorage', error);
-        toast({ variant: 'destructive', description: 'فشل تحميل البيانات الأساسية.'});
-    } finally {
-        setIsDataLoaded(true);
+            const branchesSnapshot = await getDocs(collection(db, 'branches'));
+            setAllBranches(branchesSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })) as Branch[]);
+
+            const categoriesSnapshot = await getDocs(collection(db, 'violationCategories'));
+            setCategories(categoriesSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })) as ViolationCategory[]);
+        } catch (error) {
+            console.error('Failed to load data from Firestore', error);
+            toast({ variant: 'destructive', description: 'فشل تحميل البيانات الأساسية.'});
+        } finally {
+            setIsDataLoaded(true);
+        }
     }
+    fetchData();
   }, [toast]);
 
   const form = useForm<ViolationFormValues>({
     resolver: zodResolver(violationFormSchema),
-    defaultValues: {
-      status: 'unpaid',
-      paymentNumber: '',
-    },
+    defaultValues: { status: 'unpaid', paymentNumber: '' },
   });
 
   const watchRegion = form.watch('region');
@@ -110,47 +85,30 @@ export default function NewViolationPage() {
   const watchBranchId = form.watch('branchId');
   const watchCategory = form.watch('category');
 
-  const availableBrands = allBrands;
   const availableBranches = allBranches.filter(b => b.region === watchRegion && b.brand === watchBrand);
   const availableSubCategories = categories.find(c => c.mainCategoryCode === watchCategory)?.subCategories || [];
 
   useEffect(() => {
     if (watchBranchId) {
-      const details = allBranches.find(b => b.id === watchBranchId);
-      setBranchDetails(details || null);
+      setBranchDetails(allBranches.find(b => b.id === watchBranchId) || null);
     } else {
       setBranchDetails(null);
     }
   }, [watchBranchId, allBranches]);
-
-  useEffect(() => {
-    form.resetField('brand', { defaultValue: '' });
-    form.resetField('branchId', { defaultValue: '' });
-  }, [watchRegion, form]);
-
-  useEffect(() => {
-    form.resetField('branchId', { defaultValue: '' });
-  }, [watchBrand, form]);
   
-  useEffect(() => {
-    form.resetField('subCategory', { defaultValue: '' });
-  }, [watchCategory, form]);
+  useEffect(() => { form.resetField('brand', { defaultValue: '' }); form.resetField('branchId', { defaultValue: '' }); }, [watchRegion, form]);
+  useEffect(() => { form.resetField('branchId', { defaultValue: '' }); }, [watchBrand, form]);
+  useEffect(() => { form.resetField('subCategory', { defaultValue: '' }); }, [watchCategory, form]);
 
-  function onSubmit(data: ViolationFormValues) {
+  async function onSubmit(data: ViolationFormValues) {
     try {
-        const violations = JSON.parse(localStorage.getItem('violations') || '[]') as Violation[];
         const branch = allBranches.find(b => b.id === data.branchId);
-
-        if (!branch) {
-            toast({ variant: 'destructive', description: 'الفرع المختار غير صحيح.' });
-            return;
-        }
+        if (!branch) throw new Error("Branch not found");
 
         const category = categories.find(c => c.mainCategoryCode === data.category);
         const subCategory = category?.subCategories.find(sc => sc.code === data.subCategory);
 
-        const newViolation: Violation = {
-            id: `v${new Date().getTime()}`,
+        const newViolationData = {
             violationNumber: data.violationNumber,
             paymentNumber: data.paymentNumber || '',
             date: format(data.violationDate, 'yyyy-MM-dd'),
@@ -165,14 +123,9 @@ export default function NewViolationPage() {
             city: branch.city,
         };
         
-        const updatedViolations = [newViolation, ...violations];
-        localStorage.setItem('violations', JSON.stringify(updatedViolations));
+        await addDoc(collection(db, "violations"), newViolationData);
         
-        toast({
-          title: "نجاح",
-          description: "تم حفظ المخالفة بنجاح.",
-        });
-
+        toast({ title: "نجاح", description: "تم حفظ المخالفة بنجاح." });
         router.push('/violations');
 
     } catch (error) {
@@ -187,7 +140,7 @@ export default function NewViolationPage() {
             <PageHeader title="تسجيل مخالفة جديدة" />
             <div className="grid gap-6 lg:grid-cols-3">
                 <div className="lg:col-span-2 flex flex-col gap-6">
-                    <Card><CardHeader><CardTitle>جاري تحميل البيانات...</CardTitle></CardHeader></Card>
+                    <Card><CardHeader><CardTitle>جاري تحميل البيانات...</CardTitle></CardHeader><CardContent><Skeleton className="h-64 w-full" /></CardContent></Card>
                 </div>
             </div>
         </div>
@@ -207,60 +160,9 @@ export default function NewViolationPage() {
               </CardHeader>
               <CardContent>
                 <div className="grid gap-4 md:grid-cols-3">
-                  <FormField
-                    control={form.control}
-                    name="region"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>المنطقة التشغيلية</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || ''}>
-                          <FormControl>
-                            <SelectTrigger><SelectValue placeholder="اختر منطقة" /></SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {regions.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="brand"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>البراند</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || ''} disabled={!watchRegion}>
-                          <FormControl>
-                            <SelectTrigger><SelectValue placeholder="اختر براند" /></SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {availableBrands.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="branchId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>الفرع</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || ''} disabled={!watchBrand}>
-                          <FormControl>
-                            <SelectTrigger><SelectValue placeholder="اختر فرع" /></SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {availableBranches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <FormField control={form.control} name="region" render={({ field }) => (<FormItem><FormLabel>المنطقة التشغيلية</FormLabel><Select onValueChange={field.onChange} value={field.value || ''}><FormControl><SelectTrigger><SelectValue placeholder="اختر منطقة" /></SelectTrigger></FormControl><SelectContent>{regions.map(r => <SelectItem key={r.id} value={r.name}>{r.name}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
+                  <FormField control={form.control} name="brand" render={({ field }) => (<FormItem><FormLabel>البراند</FormLabel><Select onValueChange={field.onChange} value={field.value || ''} disabled={!watchRegion}><FormControl><SelectTrigger><SelectValue placeholder="اختر براند" /></SelectTrigger></FormControl><SelectContent>{allBrands.map(b => <SelectItem key={b.id} value={b.name}>{b.name}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
+                  <FormField control={form.control} name="branchId" render={({ field }) => (<FormItem><FormLabel>الفرع</FormLabel><Select onValueChange={field.onChange} value={field.value || ''} disabled={!watchBrand}><FormControl><SelectTrigger><SelectValue placeholder="اختر فرع" /></SelectTrigger></FormControl><SelectContent>{availableBranches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
                 </div>
               </CardContent>
             </Card>
@@ -270,96 +172,12 @@ export default function NewViolationPage() {
                 <CardDescription>أدخل معلومات المخالفة وتفاصيلها الدقيقة.</CardDescription>
               </CardHeader>
               <CardContent className="grid gap-4 md:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="violationNumber"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>رقم المخالفة</FormLabel>
-                      <FormControl><Input placeholder="e.g., 123456789" {...field} value={field.value ?? ''} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="paymentNumber"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>رقم السداد (اختياري)</FormLabel>
-                      <FormControl><Input placeholder="e.g., SADAD-98765" {...field} value={field.value ?? ''} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="violationDate"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>تاريخ الرصد</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button variant={"outline"} className={cn("w-full justify-start text-right font-normal", !field.value && "text-muted-foreground")}>
-                              <CalendarIcon className="ml-2 h-4 w-4" />
-                              {field.value ? format(field.value, "PPP") : <span>اختر تاريخ</span>}
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="fineAmount"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>قيمة المخالفة</FormLabel>
-                      <FormControl><Input type="number" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="category"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>الفئة العامة</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value || ''}>
-                        <FormControl>
-                           <SelectTrigger><SelectValue placeholder="اختر فئة" /></SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                           {categories.map(c => <SelectItem key={c.mainCategoryCode} value={c.mainCategoryCode}>{c.mainCategory}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="subCategory"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>الفئة الفرعية</FormLabel>
-                       <Select onValueChange={field.onChange} value={field.value || ''} disabled={!watchCategory}>
-                            <FormControl>
-                               <SelectTrigger><SelectValue placeholder="اختر فئة فرعية" /></SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                               {availableSubCategories.map(sc => <SelectItem key={sc.code} value={sc.code}>{`${sc.code} - ${sc.name}`}</SelectItem>)}
-                            </SelectContent>
-                          </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <FormField control={form.control} name="violationNumber" render={({ field }) => (<FormItem><FormLabel>رقم المخالفة</FormLabel><FormControl><Input placeholder="e.g., 123456789" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="paymentNumber" render={({ field }) => (<FormItem><FormLabel>رقم السداد (اختياري)</FormLabel><FormControl><Input placeholder="e.g., SADAD-98765" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="violationDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>تاريخ الرصد</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full justify-start text-right font-normal", !field.value && "text-muted-foreground")}><CalendarIcon className="ml-2 h-4 w-4" />{field.value ? format(field.value, "PPP") : <span>اختر تاريخ</span>}</Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="fineAmount" render={({ field }) => (<FormItem><FormLabel>قيمة المخالفة</FormLabel><FormControl><Input type="number" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="category" render={({ field }) => (<FormItem><FormLabel>الفئة العامة</FormLabel><Select onValueChange={field.onChange} value={field.value || ''}><FormControl><SelectTrigger><SelectValue placeholder="اختر فئة" /></SelectTrigger></FormControl><SelectContent>{categories.map(c => <SelectItem key={c.mainCategoryCode} value={c.mainCategoryCode}>{c.mainCategory}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="subCategory" render={({ field }) => (<FormItem><FormLabel>الفئة الفرعية</FormLabel><Select onValueChange={field.onChange} value={field.value || ''} disabled={!watchCategory}><FormControl><SelectTrigger><SelectValue placeholder="اختر فئة فرعية" /></SelectTrigger></FormControl><SelectContent>{availableSubCategories.map(sc => <SelectItem key={sc.code} value={sc.code}>{`${sc.code} - ${sc.name}`}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
                 <div className="md:col-span-2 space-y-2">
                   <FormLabel>الصور المرفقة</FormLabel>
                   <div className="flex items-center justify-center w-full">
@@ -373,32 +191,7 @@ export default function NewViolationPage() {
                     </label>
                   </div>
                 </div>
-                <FormField
-                  control={form.control}
-                  name="status"
-                  render={({ field }) => (
-                    <FormItem className="md:col-span-2 space-y-2">
-                      <FormLabel>حالة المخالفة</FormLabel>
-                      <FormControl>
-                        <RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4">
-                           <FormItem className="flex items-center space-x-2 space-x-reverse">
-                             <FormControl><RadioGroupItem value="paid" id="paid" /></FormControl>
-                             <FormLabel htmlFor="paid" className="font-normal">مدفوعة</FormLabel>
-                           </FormItem>
-                           <FormItem className="flex items-center space-x-2 space-x-reverse">
-                             <FormControl><RadioGroupItem value="unpaid" id="unpaid" /></FormControl>
-                             <FormLabel htmlFor="unpaid" className="font-normal">غير مدفوعة</FormLabel>
-                           </FormItem>
-                           <FormItem className="flex items-center space-x-2 space-x-reverse">
-                             <FormControl><RadioGroupItem value="filed" id="filed" /></FormControl>
-                             <FormLabel htmlFor="filed" className="font-normal">ملفية</FormLabel>
-                           </FormItem>
-                        </RadioGroup>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <FormField control={form.control} name="status" render={({ field }) => (<FormItem className="md:col-span-2 space-y-2"><FormLabel>حالة المخالفة</FormLabel><FormControl><RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4"><FormItem className="flex items-center space-x-2 space-x-reverse"><FormControl><RadioGroupItem value="paid" id="paid" /></FormControl><FormLabel htmlFor="paid" className="font-normal">مدفوعة</FormLabel></FormItem><FormItem className="flex items-center space-x-2 space-x-reverse"><FormControl><RadioGroupItem value="unpaid" id="unpaid" /></FormControl><FormLabel htmlFor="unpaid" className="font-normal">غير مدفوعة</FormLabel></FormItem><FormItem className="flex items-center space-x-2 space-x-reverse"><FormControl><RadioGroupItem value="filed" id="filed" /></FormControl><FormLabel htmlFor="filed" className="font-normal">ملفية</FormLabel></FormItem></RadioGroup></FormControl><FormMessage /></FormItem>)} />
               </CardContent>
             </Card>
             <div className="flex justify-end gap-2">
@@ -408,9 +201,7 @@ export default function NewViolationPage() {
           </div>
           <div className="lg:col-span-1">
             <Card className="sticky top-20">
-              <CardHeader>
-                <CardTitle>معلومات الفرع</CardTitle>
-              </CardHeader>
+              <CardHeader><CardTitle>معلومات الفرع</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 {branchDetails ? (
                   <>

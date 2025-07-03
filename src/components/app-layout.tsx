@@ -1,8 +1,12 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { signOut } from 'firebase/auth';
+
+import { auth } from '@/lib/firebase';
 import {
   SidebarProvider,
   Sidebar,
@@ -49,6 +53,31 @@ const navItems = [
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [user, loading, error] = useAuthState(auth);
+
+  useEffect(() => {
+    if (error) {
+      console.error('Firebase auth error:', error);
+    }
+    // When no longer loading, if there's no user, redirect to login
+    if (!loading && !user) {
+      router.push('/login');
+    }
+  }, [user, loading, router, error]);
+
+  // While loading, show a full-screen loader
+  if (loading || !user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="flex flex-col items-center gap-4 text-center">
+          <Shield className="h-12 w-12 text-primary animate-pulse" />
+          <h1 className="text-xl font-semibold">جاري التحقق من الهوية</h1>
+          <p className="text-muted-foreground">الرجاء الانتظار...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <SidebarProvider>
@@ -102,7 +131,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 }
 
 function UserMenu() {
-  const router = useRouter();
+  const [user] = useAuthState(auth);
+
+  const handleLogout = async () => {
+    await signOut(auth);
+  };
 
   return (
     <DropdownMenu>
@@ -114,16 +147,16 @@ function UserMenu() {
         >
           <Avatar>
             <AvatarImage
-              src="https://placehold.co/32x32.png"
+              src={user?.photoURL ?? "https://placehold.co/32x32.png"}
               alt="صورة المستخدم"
               data-ai-hint="user avatar"
             />
-            <AvatarFallback>عم</AvatarFallback>
+            <AvatarFallback>{user?.email?.[0].toUpperCase() ?? 'U'}</AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuLabel>حسابي</DropdownMenuLabel>
+        <DropdownMenuLabel>{user?.displayName ?? user?.email}</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem>
           <Settings className="mr-2 h-4 w-4" />
@@ -134,7 +167,7 @@ function UserMenu() {
           <span>الدعم</span>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => router.push('/login')}>
+        <DropdownMenuItem onClick={handleLogout}>
           <LogOut className="mr-2 h-4 w-4" />
           <span>تسجيل الخروج</span>
         </DropdownMenuItem>

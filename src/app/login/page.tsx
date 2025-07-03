@@ -14,17 +14,41 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Shield } from 'lucide-react';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
+import { useToast } from '@/hooks/use-toast';
 
 export default function LoginPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // For prototyping, we'll just redirect to the dashboard.
-    // In a real app, you would add authentication logic here.
-    router.push('/');
+    if (!email || !password) {
+        toast({
+            variant: 'destructive',
+            title: 'خطأ',
+            description: 'الرجاء إدخال البريد الإلكتروني وكلمة المرور.',
+        });
+        return;
+    }
+    setIsLoading(true);
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      router.push('/');
+    } catch (error) {
+      console.error("Login failed:", error);
+      toast({
+        variant: 'destructive',
+        title: 'فشل تسجيل الدخول',
+        description: 'البريد الإلكتروني أو كلمة المرور غير صحيحة.',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -47,6 +71,7 @@ export default function LoginPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              disabled={isLoading}
             />
           </div>
           <div className="grid gap-2">
@@ -57,12 +82,13 @@ export default function LoginPage() {
               required 
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              disabled={isLoading}
             />
           </div>
         </CardContent>
         <CardFooter>
-          <Button type="submit" className="w-full">
-            تسجيل الدخول
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? 'جاري تسجيل الدخول...' : 'تسجيل الدخول'}
           </Button>
         </CardFooter>
       </form>

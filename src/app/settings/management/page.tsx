@@ -9,24 +9,23 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { PlusCircle, Trash2 } from 'lucide-react';
-import {
-  regions as initialRegions,
-  brands as initialBrands,
-  violationCategories as initialViolationCategories,
-  ViolationCategory,
-  ViolationSubCategory,
-} from '@/lib/mock-data';
+import { ViolationCategory, ViolationSubCategory } from '@/lib/mock-data';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
+import { db } from '@/lib/firebase';
+import { collection, getDocs, doc, addDoc, deleteDoc, updateDoc } from 'firebase/firestore';
+
+type DbRegion = { id: string; name: string; };
+type DbBrand = { id: string; name: string; };
+type DbCategory = ViolationCategory & { id: string; };
 
 type SubCategoryManagerProps = {
-  mainCategory: string;
-  subCategories: ViolationSubCategory[];
-  onAddSubCategory: (mainCategory: string, subCategory: ViolationSubCategory) => void;
-  onDeleteSubCategory: (mainCategory: string, subCategoryCode: string) => void;
+  mainCategory: DbCategory;
+  onAddSubCategory: (mainCategoryId: string, subCategory: ViolationSubCategory) => void;
+  onDeleteSubCategory: (mainCategoryId: string, subCategoryCode: string) => void;
 };
 
-function SubCategoryManager({ mainCategory, subCategories, onAddSubCategory, onDeleteSubCategory }: SubCategoryManagerProps) {
+function SubCategoryManager({ mainCategory, onAddSubCategory, onDeleteSubCategory }: SubCategoryManagerProps) {
     const [newSubCategoryName, setNewSubCategoryName] = useState('');
     const [newSubCategoryCode, setNewSubCategoryCode] = useState('');
     const { toast } = useToast();
@@ -36,7 +35,11 @@ function SubCategoryManager({ mainCategory, subCategories, onAddSubCategory, onD
             toast({ variant: 'destructive', description: 'الرجاء إدخال الرقم والاسم للفئة الفرعية.' });
             return;
         }
-        onAddSubCategory(mainCategory, { code: newSubCategoryCode, name: newSubCategoryName });
+        if (mainCategory.subCategories.some(sc => sc.code === newSubCategoryCode.trim())) {
+            toast({ variant: "destructive", description: "رقم الفئة الفرعية موجود بالفعل." });
+            return;
+        }
+        onAddSubCategory(mainCategory.id, { code: newSubCategoryCode, name: newSubCategoryName });
         setNewSubCategoryName('');
         setNewSubCategoryCode('');
     };
@@ -49,31 +52,28 @@ function SubCategoryManager({ mainCategory, subCategories, onAddSubCategory, onD
                 <Button onClick={handleAdd} size="sm"><PlusCircle className="mr-2 h-4 w-4" /> إضافة</Button>
             </div>
              <ul className="space-y-1 list-inside text-muted-foreground">
-                {subCategories.map(sc => (
+                {mainCategory.subCategories.map(sc => (
                     <li key={sc.code} className="flex items-center justify-between hover:bg-muted/50 rounded-md pr-2">
                        <div className="flex items-center gap-2">
                          <span className="font-mono text-xs bg-muted rounded px-1.5 py-0.5">{sc.code}</span>
                          <span>{sc.name}</span>
                        </div>
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onDeleteSubCategory(mainCategory, sc.code)}>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onDeleteSubCategory(mainCategory.id, sc.code)}>
                             <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                     </li>
                 ))}
-                {subCategories.length === 0 && (
-                    <li className="text-center text-sm py-2">لا توجد فئات فرعية.</li>
-                )}
+                {mainCategory.subCategories.length === 0 && <li className="text-center text-sm py-2">لا توجد فئات فرعية.</li>}
             </ul>
         </div>
     );
 }
 
-
 export default function ManagementPage() {
   const { toast } = useToast();
-  const [regions, setRegions] = useState<string[]>([]);
-  const [brands, setBrands] = useState<string[]>([]);
-  const [categories, setCategories] = useState<ViolationCategory[]>([]);
+  const [regions, setRegions] = useState<DbRegion[]>([]);
+  const [brands, setBrands] = useState<DbBrand[]>([]);
+  const [categories, setCategories] = useState<DbCategory[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   
   const [newRegion, setNewRegion] = useState('');
@@ -82,127 +82,116 @@ export default function ManagementPage() {
   const [newMainCategoryCode, setNewMainCategoryCode] = useState('');
 
   useEffect(() => {
-    try {
-      const storedRegions = localStorage.getItem('regions');
-      const storedBrands = localStorage.getItem('brands');
-      const storedCategories = localStorage.getItem('violationCategories');
-      
-      setRegions(storedRegions ? JSON.parse(storedRegions) : initialRegions);
-      setBrands(storedBrands ? JSON.parse(storedBrands) : initialBrands);
-      setCategories(storedCategories ? JSON.parse(storedCategories) : initialViolationCategories);
-    } catch (error) {
-      console.error("Failed to load data from localStorage", error);
-      toast({ variant: 'destructive', description: 'فشل في تحميل البيانات من المتصفح.' });
-      setRegions(initialRegions);
-      setBrands(initialBrands);
-      setCategories(initialViolationCategories);
-    } finally {
-        setIsLoaded(true);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (isLoaded) {
+    async function fetchData() {
         try {
-            localStorage.setItem('regions', JSON.stringify(regions));
-            localStorage.setItem('brands', JSON.stringify(brands));
-            localStorage.setItem('violationCategories', JSON.stringify(categories));
+            const regionsSnapshot = await getDocs(collection(db, 'regions'));
+            setRegions(regionsSnapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name })));
+            
+            const brandsSnapshot = await getDocs(collection(db, 'brands'));
+            setBrands(brandsSnapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name })));
+            
+            const categoriesSnapshot = await getDocs(collection(db, 'violationCategories'));
+            setCategories(categoriesSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as DbCategory)));
         } catch (error) {
-            console.error("Failed to save data to localStorage", error);
-            toast({ variant: 'destructive', description: 'فشل في حفظ البيانات في المتصفح.' });
+            console.error("Failed to load data from Firestore", error);
+            toast({ variant: 'destructive', description: 'فشل في تحميل البيانات من قاعدة البيانات.' });
+        } finally {
+            setIsLoaded(true);
         }
     }
-  }, [regions, brands, categories, isLoaded, toast]);
+    fetchData();
+  }, [toast]);
 
-
-  const handleAddRegion = () => {
-    if (newRegion.trim() !== '') {
-      setRegions([...regions, newRegion.trim()]);
-      setNewRegion('');
-      toast({ description: "تمت إضافة المنطقة بنجاح." });
-    } else {
-      toast({ variant: "destructive", description: "لا يمكن إضافة منطقة فارغة." });
+  const handleAddSimpleItem = async (collectionName: 'regions' | 'brands', value: string, setValue: (v: string) => void, currentItems: {name: string}[]) => {
+    if (value.trim() === '') {
+      toast({ variant: "destructive", description: "لا يمكن إضافة قيمة فارغة." });
+      return;
+    }
+    if (currentItems.some(item => item.name === value.trim())) {
+      toast({ variant: "destructive", description: "هذه القيمة موجودة بالفعل." });
+      return;
+    }
+    try {
+      const docRef = await addDoc(collection(db, collectionName), { name: value.trim() });
+      const stateSetter = collectionName === 'regions' ? setRegions : setBrands;
+      stateSetter(prev => [...prev, { id: docRef.id, name: value.trim() }] as any);
+      setValue('');
+      toast({ description: "تمت الإضافة بنجاح." });
+    } catch (error) {
+      toast({ variant: "destructive", description: "فشل في الحفظ." });
     }
   };
-  const handleDeleteRegion = (regionToDelete: string) => {
-    setRegions(regions.filter(r => r !== regionToDelete));
-    toast({ description: "تم حذف المنطقة." });
-  };
 
-  const handleAddBrand = () => {
-    if (newBrand.trim() !== '') {
-      setBrands([...brands, newBrand.trim()]);
-      setNewBrand('');
-      toast({ description: "تمت إضافة البراند بنجاح." });
-    } else {
-      toast({ variant: "destructive", description: "لا يمكن إضافة براند فارغ." });
+  const handleDeleteSimpleItem = async (collectionName: 'regions' | 'brands', id: string) => {
+    try {
+      await deleteDoc(doc(db, collectionName, id));
+      const stateSetter = collectionName === 'regions' ? setRegions : setBrands;
+      stateSetter(prev => prev.filter(item => item.id !== id));
+      toast({ description: "تم الحذف بنجاح." });
+    } catch (error) {
+      toast({ variant: "destructive", description: "فشل في الحذف." });
     }
   };
-  const handleDeleteBrand = (brandToDelete: string) => {
-    setBrands(brands.filter(b => b !== brandToDelete));
-    toast({ description: "تم حذف البراند." });
-  };
 
-  const handleAddMainCategory = () => {
-    if (newMainCategory.trim() !== '' && newMainCategoryCode.trim() !== '') {
-      if (categories.some(c => c.mainCategoryCode === newMainCategoryCode.trim())) {
-        toast({ variant: "destructive", description: "رقم الفئة الرئيسية موجود بالفعل." });
-        return;
-      }
-      setCategories([...categories, { mainCategoryCode: newMainCategoryCode.trim(), mainCategory: newMainCategory.trim(), subCategories: [] }]);
-      setNewMainCategory('');
-      setNewMainCategoryCode('');
+  const handleAddMainCategory = async () => {
+    if (newMainCategory.trim() === '' || newMainCategoryCode.trim() === '') {
+       toast({ variant: "destructive", description: "الرجاء إدخال الرقم والاسم للفئة الرئيسية." }); return;
+    }
+    if (categories.some(c => c.mainCategoryCode === newMainCategoryCode.trim())) {
+      toast({ variant: "destructive", description: "رقم الفئة الرئيسية موجود بالفعل." }); return;
+    }
+    try {
+      const newCategoryData = { mainCategoryCode: newMainCategoryCode.trim(), mainCategory: newMainCategory.trim(), subCategories: [] };
+      const docRef = await addDoc(collection(db, "violationCategories"), newCategoryData);
+      setCategories([...categories, { ...newCategoryData, id: docRef.id }]);
+      setNewMainCategory(''); setNewMainCategoryCode('');
       toast({ description: "تمت إضافة الفئة الرئيسية بنجاح." });
-    } else {
-       toast({ variant: "destructive", description: "الرجاء إدخال الرقم والاسم للفئة الرئيسية." });
+    } catch (error) {
+       toast({ variant: "destructive", description: "فشل في حفظ الفئة الرئيسية." });
     }
-  };
-  const handleDeleteMainCategory = (mainCategoryToDelete: string) => {
-    setCategories(categories.filter(c => c.mainCategory !== mainCategoryToDelete));
-    toast({ description: "تم حذف الفئة الرئيسية." });
   };
   
-  const handleAddSubCategory = (mainCategory: string, subCategory: ViolationSubCategory) => {
-     if (subCategory.name.trim() !== '' && subCategory.code.trim() !== '') {
-        const updatedCategories = categories.map(c => {
-            if (c.mainCategory === mainCategory) {
-                if(c.subCategories.some(sc => sc.code === subCategory.code.trim())) {
-                    toast({ variant: "destructive", description: "رقم الفئة الفرعية موجود بالفعل." });
-                    return c;
-                }
-                return { ...c, subCategories: [...c.subCategories, { code: subCategory.code.trim(), name: subCategory.name.trim() }] };
-            }
-            return c;
-        });
-        setCategories(updatedCategories);
-        toast({ description: "تمت إضافة الفئة الفرعية بنجاح." });
-     }
+  const handleDeleteMainCategory = async (id: string) => {
+    try {
+        await deleteDoc(doc(db, "violationCategories", id));
+        setCategories(categories.filter(c => c.id !== id));
+        toast({ description: "تم حذف الفئة الرئيسية." });
+    } catch (error) {
+        toast({ variant: "destructive", description: "فشل في حذف الفئة الرئيسية." });
+    }
   };
-  const handleDeleteSubCategory = (mainCategory: string, subCategoryCodeToDelete: string) => {
-     const updatedCategories = categories.map(c => {
-        if (c.mainCategory === mainCategory) {
-            return { ...c, subCategories: c.subCategories.filter(sc => sc.code !== subCategoryCodeToDelete) };
-        }
-        return c;
-    });
-    setCategories(updatedCategories);
-    toast({ description: "تم حذف الفئة الفرعية." });
+  
+  const handleAddSubCategory = async (mainCategoryId: string, subCategory: ViolationSubCategory) => {
+    const category = categories.find(c => c.id === mainCategoryId);
+    if (!category) return;
+    const updatedSubCategories = [...category.subCategories, subCategory];
+    try {
+        await updateDoc(doc(db, "violationCategories", mainCategoryId), { subCategories: updatedSubCategories });
+        setCategories(categories.map(c => c.id === mainCategoryId ? { ...c, subCategories: updatedSubCategories } : c));
+        toast({ description: "تمت إضافة الفئة الفرعية بنجاح." });
+    } catch (error) {
+        toast({ variant: "destructive", description: "فشل في حفظ الفئة الفرعية." });
+    }
+  };
+
+  const handleDeleteSubCategory = async (mainCategoryId: string, subCategoryCodeToDelete: string) => {
+    const category = categories.find(c => c.id === mainCategoryId);
+    if (!category) return;
+    const updatedSubCategories = category.subCategories.filter(sc => sc.code !== subCategoryCodeToDelete);
+    try {
+        await updateDoc(doc(db, "violationCategories", mainCategoryId), { subCategories: updatedSubCategories });
+        setCategories(categories.map(c => c.id === mainCategoryId ? { ...c, subCategories: updatedSubCategories } : c));
+        toast({ description: "تم حذف الفئة الفرعية." });
+    } catch (error) {
+        toast({ variant: "destructive", description: "فشل في حذف الفئة الفرعية." });
+    }
   };
 
   if (!isLoaded) {
     return (
       <div className="flex flex-col gap-6">
         <PageHeader title="إدارة بيانات النظام" />
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-8 w-48" />
-            <Skeleton className="h-4 w-72" />
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-40 w-full" />
-          </CardContent>
-        </Card>
+        <Card><CardHeader><Skeleton className="h-8 w-48" /><Skeleton className="h-4 w-72" /></CardHeader><CardContent className="space-y-4"><Skeleton className="h-10 w-full" /><Skeleton className="h-40 w-full" /></CardContent></Card>
       </div>
     );
   }
@@ -216,92 +205,46 @@ export default function ManagementPage() {
           <TabsTrigger value="regions">المناطق</TabsTrigger>
           <TabsTrigger value="categories">فئات المخالفات</TabsTrigger>
         </TabsList>
-        
         <TabsContent value="brands">
           <Card>
-            <CardHeader>
-              <CardTitle>إدارة البراندات</CardTitle>
-              <CardDescription>إضافة أو حذف البراندات التجارية في النظام.</CardDescription>
-            </CardHeader>
+            <CardHeader><CardTitle>إدارة البراندات</CardTitle><CardDescription>إضافة أو حذف البراندات التجارية في النظام.</CardDescription></CardHeader>
             <CardContent>
               <div className="flex gap-2 mb-4">
                 <Input value={newBrand} onChange={(e) => setNewBrand(e.target.value)} placeholder="اسم البراند الجديد" />
-                <Button onClick={handleAddBrand}><PlusCircle className="mr-2 h-4 w-4" /> إضافة</Button>
+                <Button onClick={() => handleAddSimpleItem('brands', newBrand, setNewBrand, brands)}><PlusCircle className="mr-2 h-4 w-4" /> إضافة</Button>
               </div>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>اسم البراند</TableHead>
-                    <TableHead className="w-[100px] text-left">إجراء</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {brands.map(brand => (
-                    <TableRow key={brand}>
-                      <TableCell>{brand}</TableCell>
-                      <TableCell className="text-left">
-                        <Button variant="ghost" size="icon" onClick={() => handleDeleteBrand(brand)}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
+              <Table><TableHeader><TableRow><TableHead>اسم البراند</TableHead><TableHead className="w-[100px] text-left">إجراء</TableHead></TableRow></TableHeader>
+                <TableBody>{brands.map(brand => (<TableRow key={brand.id}><TableCell>{brand.name}</TableCell><TableCell className="text-left"><Button variant="ghost" size="icon" onClick={() => handleDeleteSimpleItem('brands', brand.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell></TableRow>))}</TableBody>
               </Table>
             </CardContent>
           </Card>
         </TabsContent>
-
         <TabsContent value="regions">
            <Card>
-            <CardHeader>
-              <CardTitle>إدارة المناطق</CardTitle>
-              <CardDescription>إضافة أو حذف المناطق التشغيلية في النظام.</CardDescription>
-            </CardHeader>
+            <CardHeader><CardTitle>إدارة المناطق</CardTitle><CardDescription>إضافة أو حذف المناطق التشغيلية في النظام.</CardDescription></CardHeader>
             <CardContent>
               <div className="flex gap-2 mb-4">
                 <Input value={newRegion} onChange={(e) => setNewRegion(e.target.value)} placeholder="اسم المنطقة الجديدة" />
-                <Button onClick={handleAddRegion}><PlusCircle className="mr-2 h-4 w-4" /> إضافة</Button>
+                <Button onClick={() => handleAddSimpleItem('regions', newRegion, setNewRegion, regions)}><PlusCircle className="mr-2 h-4 w-4" /> إضافة</Button>
               </div>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>اسم المنطقة</TableHead>
-                    <TableHead className="w-[100px] text-left">إجراء</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {regions.map(region => (
-                    <TableRow key={region}>
-                      <TableCell>{region}</TableCell>
-                      <TableCell className="text-left">
-                        <Button variant="ghost" size="icon" onClick={() => handleDeleteRegion(region)}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
+              <Table><TableHeader><TableRow><TableHead>اسم المنطقة</TableHead><TableHead className="w-[100px] text-left">إجراء</TableHead></TableRow></TableHeader>
+                <TableBody>{regions.map(region => (<TableRow key={region.id}><TableCell>{region.name}</TableCell><TableCell className="text-left"><Button variant="ghost" size="icon" onClick={() => handleDeleteSimpleItem('regions', region.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell></TableRow>))}</TableBody>
               </Table>
             </CardContent>
           </Card>
         </TabsContent>
-
         <TabsContent value="categories">
             <Card>
-                <CardHeader>
-                    <CardTitle>إدارة فئات المخالفات</CardTitle>
-                    <CardDescription>إدارة الفئات الرئيسية والفرعية للمخالفات وأرقامها.</CardDescription>
-                </CardHeader>
+                <CardHeader><CardTitle>إدارة فئات المخالفات</CardTitle><CardDescription>إدارة الفئات الرئيسية والفرعية للمخالفات وأرقامها.</CardDescription></CardHeader>
                 <CardContent className="space-y-4">
                     <div className="flex gap-2">
                          <Input value={newMainCategoryCode} onChange={(e) => setNewMainCategoryCode(e.target.value)} placeholder="رقم الفئة" className="w-32" />
                          <Input value={newMainCategory} onChange={(e) => setNewMainCategory(e.target.value)} placeholder="اسم الفئة الرئيسية الجديدة" className="flex-1" />
                         <Button onClick={handleAddMainCategory}><PlusCircle className="mr-2 h-4 w-4" /> إضافة فئة رئيسية</Button>
                     </div>
-                     <Accordion type="multiple" className="w-full" defaultValue={categories.length > 0 ? [categories[0].mainCategory] : []}>
+                     <Accordion type="multiple" className="w-full" defaultValue={categories.length > 0 ? [categories[0].id] : []}>
                         {categories.map((category) => (
-                           <AccordionItem value={category.mainCategory} key={category.mainCategory}>
+                           <AccordionItem value={category.id} key={category.id}>
                                 <div className="flex items-center w-full hover:bg-muted/50 rounded-md">
                                     <AccordionTrigger className="flex-1 px-4 py-2 text-right">
                                       <div className="flex items-center gap-3">
@@ -309,18 +252,11 @@ export default function ManagementPage() {
                                         <span>{category.mainCategory}</span>
                                       </div>
                                     </AccordionTrigger>
-                                     <Button variant="ghost" size="icon" className="mr-2" onClick={() => handleDeleteMainCategory(category.mainCategory)}>
-                                        <Trash2 className="h-4 w-4 text-destructive" />
-                                    </Button>
+                                     <Button variant="ghost" size="icon" className="mr-2" onClick={() => handleDeleteMainCategory(category.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                                 </div>
                                 <AccordionContent>
                                     <div className="pt-2 pl-4 pr-8 space-y-2 border-r-2 border-border mr-6">
-                                        <SubCategoryManager 
-                                            mainCategory={category.mainCategory} 
-                                            subCategories={category.subCategories}
-                                            onAddSubCategory={handleAddSubCategory}
-                                            onDeleteSubCategory={handleDeleteSubCategory}
-                                        />
+                                        <SubCategoryManager mainCategory={category} onAddSubCategory={handleAddSubCategory} onDeleteSubCategory={handleDeleteSubCategory} />
                                     </div>
                                 </AccordionContent>
                            </AccordionItem>

@@ -4,43 +4,17 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { MoreHorizontal, PlusCircle, Trash2 } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { violations as initialViolations, Violation } from '@/lib/mock-data';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Violation } from '@/lib/mock-data';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
+import { collection, getDocs, doc, deleteDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 export default function ViolationsPage() {
   const { toast } = useToast();
@@ -50,34 +24,39 @@ export default function ViolationsPage() {
   const [violationToDelete, setViolationToDelete] = useState<Violation | null>(null);
 
   useEffect(() => {
-    try {
-      const storedViolations = localStorage.getItem('violations');
-      setViolations(
-        storedViolations ? JSON.parse(storedViolations) : initialViolations
-      );
-    } catch (error) {
-      console.error('Failed to load violations from localStorage', error);
-      setViolations(initialViolations);
-    } finally {
-      setIsLoaded(true);
+    async function fetchViolations() {
+        try {
+            const querySnapshot = await getDocs(collection(db, "violations"));
+            const violationsData = querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })) as Violation[];
+            setViolations(violationsData);
+        } catch (error) {
+            console.error('Failed to load violations from Firestore', error);
+            toast({ variant: 'destructive', description: 'فشل في تحميل المخالفات.' });
+        } finally {
+            setIsLoaded(true);
+        }
     }
-  }, []);
+    fetchViolations();
+  }, [toast]);
 
   const handleDeleteClick = (violation: Violation) => {
     setViolationToDelete(violation);
     setDeleteDialogOpen(true);
   };
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (violationToDelete) {
-      const updatedViolations = violations.filter(
-        (v) => v.id !== violationToDelete.id
-      );
-      setViolations(updatedViolations);
-      localStorage.setItem('violations', JSON.stringify(updatedViolations));
-      toast({ description: 'تم حذف المخالفة بنجاح.' });
-      setDeleteDialogOpen(false);
-      setViolationToDelete(null);
+      try {
+        await deleteDoc(doc(db, "violations", violationToDelete.id));
+        setViolations(violations.filter(v => v.id !== violationToDelete.id));
+        toast({ description: 'تم حذف المخالفة بنجاح.' });
+      } catch (error) {
+        console.error("Error deleting violation: ", error);
+        toast({ variant: 'destructive', description: 'فشل في حذف المخالفة.' });
+      } finally {
+        setDeleteDialogOpen(false);
+        setViolationToDelete(null);
+      }
     }
   };
 
@@ -162,11 +141,7 @@ export default function ViolationsPage() {
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button
-                            aria-haspopup="true"
-                            size="icon"
-                            variant="ghost"
-                          >
+                          <Button aria-haspopup="true" size="icon" variant="ghost" >
                             <MoreHorizontal className="h-4 w-4" />
                             <span className="sr-only">Toggle menu</span>
                           </Button>
@@ -175,8 +150,7 @@ export default function ViolationsPage() {
                           <DropdownMenuLabel>إجراءات</DropdownMenuLabel>
                           <DropdownMenuItem disabled>عرض التفاصيل</DropdownMenuItem>
                           <DropdownMenuItem disabled>تعديل</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleDeleteClick(violation)}
-                           className="text-destructive focus:text-destructive">
+                          <DropdownMenuItem onClick={() => handleDeleteClick(violation)} className="text-destructive focus:text-destructive">
                             <Trash2 className="ml-2 h-4 w-4" />
                             حذف
                           </DropdownMenuItem>
@@ -201,10 +175,7 @@ export default function ViolationsPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>إلغاء</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteConfirm}
-              className="bg-destructive hover:bg-destructive/90"
-            >
+            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive hover:bg-destructive/90">
               حذف
             </AlertDialogAction>
           </AlertDialogFooter>

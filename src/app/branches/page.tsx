@@ -9,70 +9,20 @@ import * as XLSX from 'xlsx';
 
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  branches as initialBranches,
-  regions as initialRegions,
-  brands as initialBrands,
-  Branch,
-} from '@/lib/mock-data';
+import { Branch } from '@/lib/mock-data';
+import { db } from '@/lib/firebase';
+import { collection, getDocs, doc, addDoc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
+
 
 const branchSchema = z.object({
   name: z.string().min(1, 'اسم الفرع مطلوب.'),
@@ -85,14 +35,16 @@ const branchSchema = z.object({
 });
 
 type BranchFormValues = z.infer<typeof branchSchema>;
+type Region = { id: string; name: string };
+type Brand = { id: string; name: string };
 
 export default function BranchesPage() {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [branches, setBranches] = useState<Branch[]>([]);
-  const [regions, setRegions] = useState<string[]>([]);
-  const [brands, setBrands] = useState<string[]>([]);
+  const [regions, setRegions] = useState<Region[]>([]);
+  const [brands, setBrands] = useState<Brand[]>([]);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingBranch, setEditingBranch] = useState<Branch | null>(null);
@@ -101,46 +53,31 @@ export default function BranchesPage() {
   const [branchToDelete, setBranchToDelete] = useState<Branch | null>(null);
 
   useEffect(() => {
-    try {
-      const storedBranches = localStorage.getItem('branches');
-      const storedRegions = localStorage.getItem('regions');
-      const storedBrands = localStorage.getItem('brands');
-
-      setBranches(storedBranches ? JSON.parse(storedBranches) : initialBranches);
-      setRegions(storedRegions ? JSON.parse(storedRegions) : initialRegions);
-      setBrands(storedBrands ? JSON.parse(storedBrands) : initialBrands);
-    } catch (error) {
-      console.error('Failed to load data from localStorage', error);
-      toast({ variant: 'destructive', description: 'فشل في تحميل البيانات من المتصفح.' });
-      setBranches(initialBranches);
-      setRegions(initialRegions);
-      setBrands(initialBrands);
-    } finally {
-      setIsLoaded(true);
-    }
-  }, [toast]);
-
-  useEffect(() => {
-    if (isLoaded) {
+    async function fetchData() {
       try {
-        localStorage.setItem('branches', JSON.stringify(branches));
+        const branchesSnapshot = await getDocs(collection(db, 'branches'));
+        setBranches(branchesSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })) as Branch[]);
+        
+        const regionsSnapshot = await getDocs(collection(db, 'regions'));
+        setRegions(regionsSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })) as Region[]);
+        
+        const brandsSnapshot = await getDocs(collection(db, 'brands'));
+        setBrands(brandsSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })) as Brand[]);
+
       } catch (error) {
-        console.error('Failed to save branches to localStorage', error);
-        toast({ variant: 'destructive', description: 'فشل في حفظ بيانات الفروع في المتصفح.' });
+        console.error('Failed to load data from Firestore', error);
+        toast({ variant: 'destructive', description: 'فشل في تحميل البيانات من قاعدة البيانات.' });
+      } finally {
+        setIsLoaded(true);
       }
     }
-  }, [branches, isLoaded, toast]);
+    fetchData();
+  }, [toast]);
   
   const form = useForm<BranchFormValues>({
     resolver: zodResolver(branchSchema),
     defaultValues: {
-      name: '',
-      city: '',
-      region: '',
-      brand: '',
-      manager: '',
-      regionalManager: '',
-      location: '',
+      name: '', city: '', region: '', brand: '', manager: '', regionalManager: '', location: '',
     },
   });
 
@@ -149,15 +86,7 @@ export default function BranchesPage() {
         if (editingBranch) {
             form.reset(editingBranch);
         } else {
-            form.reset({
-                name: '',
-                city: '',
-                region: '',
-                brand: '',
-                manager: '',
-                regionalManager: '',
-                location: '',
-            });
+            form.reset({ name: '', city: '', region: '', brand: '', manager: '', regionalManager: '', location: '' });
         }
     }
   }, [editingBranch, dialogOpen, form]);
@@ -177,44 +106,48 @@ export default function BranchesPage() {
     setDeleteDialogOpen(true);
   };
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (branchToDelete) {
-      setBranches(branches.filter((b) => b.id !== branchToDelete.id));
-      toast({ description: 'تم حذف الفرع بنجاح.' });
-      setDeleteDialogOpen(false);
-      setBranchToDelete(null);
+      try {
+        await deleteDoc(doc(db, "branches", branchToDelete.id));
+        setBranches(branches.filter((b) => b.id !== branchToDelete.id));
+        toast({ description: 'تم حذف الفرع بنجاح.' });
+      } catch (error) {
+        console.error("Error deleting branch: ", error);
+        toast({ variant: 'destructive', description: 'فشل في حذف الفرع.' });
+      } finally {
+        setDeleteDialogOpen(false);
+        setBranchToDelete(null);
+      }
     }
   };
 
-  const onSubmit = (values: BranchFormValues) => {
-    if (editingBranch) {
-      // Update existing branch
-      setBranches(
-        branches.map((b) =>
-          b.id === editingBranch.id ? { ...b, ...values } : b
-        )
-      );
-      toast({ description: 'تم تعديل الفرع بنجاح.' });
-    } else {
-      // Add new branch
-      const newBranch: Branch = {
-        id: `b${new Date().getTime()}`,
-        ...values,
-      };
-      setBranches([...branches, newBranch]);
-      toast({ description: 'تمت إضافة الفرع بنجاح.' });
+  const onSubmit = async (values: BranchFormValues) => {
+    try {
+      if (editingBranch) {
+        const branchRef = doc(db, "branches", editingBranch.id);
+        await updateDoc(branchRef, values);
+        setBranches(branches.map((b) => b.id === editingBranch.id ? { ...b, ...values } : b));
+        toast({ description: 'تم تعديل الفرع بنجاح.' });
+      } else {
+        const docRef = await addDoc(collection(db, "branches"), values);
+        const newBranch: Branch = { id: docRef.id, ...values };
+        setBranches([...branches, newBranch]);
+        toast({ description: 'تمت إضافة الفرع بنجاح.' });
+      }
+      setDialogOpen(false);
+    } catch (error) {
+      console.error("Error saving branch: ", error);
+      toast({ variant: 'destructive', description: 'فشل في حفظ الفرع.' });
     }
-    setDialogOpen(false);
   };
 
-  const handleFileImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) {
-      return;
-    }
+    if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const data = new Uint8Array(e.target?.result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: 'array' });
@@ -222,57 +155,46 @@ export default function BranchesPage() {
         const worksheet = workbook.Sheets[sheetName];
         const jsonData = XLSX.utils.sheet_to_json<any>(worksheet);
 
-        const newBranches: Branch[] = jsonData.map((row, index) => {
+        const newBranchesData = jsonData.map((row) => {
           const name = row['اسم الفرع']?.toString().trim();
-          const city = row['المدينة']?.toString().trim();
-          
-          if (!name || !city) {
-            console.warn(`Skipping row ${index + 2} due to missing data.`);
-            return null;
-          }
-
+          if (!name) return null;
           return {
-            id: `b${new Date().getTime()}${index}`,
             name: name,
-            city: city,
+            city: row['المدينة']?.toString().trim() || '',
             region: row['المنطقة']?.toString().trim() || '',
             brand: row['البراند']?.toString().trim() || '',
             manager: row['مدير الفرع']?.toString().trim() || '',
             regionalManager: row['المدير الإقليمي']?.toString().trim() || '',
             location: row['رابط الموقع']?.toString().trim() || '',
           };
-        }).filter((branch): branch is Branch => branch !== null);
-
-        if (newBranches.length > 0) {
-          setBranches(prev => [...prev, ...newBranches]);
-          toast({
-            description: `تم استيراد ${newBranches.length} فرع بنجاح.`,
+        }).filter((branch): branch is BranchFormValues => branch !== null);
+        
+        if (newBranchesData.length > 0) {
+          const batch = writeBatch(db);
+          newBranchesData.forEach(branchData => {
+            const docRef = doc(collection(db, "branches"));
+            batch.set(docRef, branchData);
           });
-        } else {
-            toast({
-                variant: 'destructive',
-                description: 'لم يتم العثور على بيانات صالحة في الملف. يرجى التحقق من أسماء الأعمدة.',
-            });
-        }
+          await batch.commit();
 
+          // Refetch branches
+          const branchesSnapshot = await getDocs(collection(db, 'branches'));
+          setBranches(branchesSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })) as Branch[]);
+
+          toast({ description: `تم استيراد ${newBranchesData.length} فرع بنجاح.` });
+        } else {
+          toast({ variant: 'destructive', description: 'لم يتم العثور على بيانات صالحة في الملف. يرجى التحقق من أسماء الأعمدة.' });
+        }
       } catch (error) {
         console.error("Error processing Excel file:", error);
-        toast({
-          variant: 'destructive',
-          description: 'حدث خطأ أثناء معالجة الملف. تأكد من أن الملف بالتنسيق الصحيح.',
-        });
+        toast({ variant: 'destructive', description: 'حدث خطأ أثناء معالجة الملف.' });
       } finally {
-        if (fileInputRef.current) {
-            fileInputRef.current.value = '';
-        }
+        if (fileInputRef.current) fileInputRef.current.value = '';
       }
     };
     reader.onerror = (error) => {
         console.error("FileReader error:", error);
-        toast({
-            variant: 'destructive',
-            description: 'فشل في قراءة الملف.',
-        });
+        toast({ variant: 'destructive', description: 'فشل في قراءة الملف.' });
     }
     reader.readAsArrayBuffer(file);
   };
@@ -297,22 +219,14 @@ export default function BranchesPage() {
 
   return (
     <>
-      <input
-        type="file"
-        ref={fileInputRef}
-        className="hidden"
-        accept=".xlsx, .xls, .csv"
-        onChange={handleFileImport}
-      />
+      <input type="file" ref={fileInputRef} className="hidden" accept=".xlsx, .xls, .csv" onChange={handleFileImport} />
       <div className="flex flex-col gap-6">
         <PageHeader title="إدارة الفروع">
           <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
-            <Upload className="mr-2 h-4 w-4" />
-            استيراد من Excel
+            <Upload className="mr-2 h-4 w-4" /> استيراد من Excel
           </Button>
           <Button onClick={handleAddNew}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            إضافة فرع جديد
+            <PlusCircle className="mr-2 h-4 w-4" /> إضافة فرع جديد
           </Button>
         </PageHeader>
         <Card>
@@ -331,9 +245,7 @@ export default function BranchesPage() {
                   <TableHead>المنطقة</TableHead>
                   <TableHead>البراند</TableHead>
                   <TableHead>مدير الفرع</TableHead>
-                  <TableHead>
-                    <span className="sr-only">Actions</span>
-                  </TableHead>
+                  <TableHead><span className="sr-only">Actions</span></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -347,22 +259,12 @@ export default function BranchesPage() {
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button aria-haspopup="true" size="icon" variant="ghost">
-                            <MoreHorizontal className="h-4 w-4" />
-                            <span className="sr-only">Toggle menu</span>
-                          </Button>
+                          <Button aria-haspopup="true" size="icon" variant="ghost"><MoreHorizontal className="h-4 w-4" /><span className="sr-only">Toggle menu</span></Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>إجراءات</DropdownMenuLabel>
-                          <DropdownMenuItem onClick={() => handleEdit(branch)}>
-                            تعديل
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="text-destructive focus:text-destructive"
-                            onClick={() => handleDeleteClick(branch)}
-                          >
-                            حذف
-                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleEdit(branch)}>تعديل</DropdownMenuItem>
+                          <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleDeleteClick(branch)}>حذف</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
@@ -377,124 +279,20 @@ export default function BranchesPage() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>
-              {editingBranch ? 'تعديل بيانات الفرع' : 'إضافة فرع جديد'}
-            </DialogTitle>
-            <DialogDescription>
-              {editingBranch
-                ? 'قم بتحديث معلومات الفرع هنا.'
-                : 'أدخل معلومات الفرع الجديد هنا.'}
-            </DialogDescription>
+            <DialogTitle>{editingBranch ? 'تعديل بيانات الفرع' : 'إضافة فرع جديد'}</DialogTitle>
+            <DialogDescription>{editingBranch ? 'قم بتحديث معلومات الفرع هنا.' : 'أدخل معلومات الفرع الجديد هنا.'}</DialogDescription>
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
               <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>اسم الفرع</FormLabel>
-                      <FormControl>
-                        <Input placeholder="مثال: فرع العليا" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="city"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>المدينة</FormLabel>
-                      <FormControl>
-                        <Input placeholder="مثال: الرياض" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="region"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>المنطقة</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="اختر منطقة" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {regions.map((r) => (<SelectItem key={r} value={r}>{r}</SelectItem>))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="brand"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>البراند</FormLabel>
-                       <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="اختر براند" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {brands.map((b) => (<SelectItem key={b} value={b}>{b}</SelectItem>))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                 <FormField
-                  control={form.control}
-                  name="manager"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>مدير الفرع</FormLabel>
-                      <FormControl>
-                        <Input placeholder="اسم مدير الفرع" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                 <FormField
-                  control={form.control}
-                  name="regionalManager"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>المدير الإقليمي</FormLabel>
-                      <FormControl>
-                        <Input placeholder="اسم المدير الإقليمي" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>اسم الفرع</FormLabel><FormControl><Input placeholder="مثال: فرع العليا" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="city" render={({ field }) => (<FormItem><FormLabel>المدينة</FormLabel><FormControl><Input placeholder="مثال: الرياض" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="region" render={({ field }) => (<FormItem><FormLabel>المنطقة</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="اختر منطقة" /></SelectTrigger></FormControl><SelectContent>{regions.map((r) => (<SelectItem key={r.id} value={r.name}>{r.name}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="brand" render={({ field }) => (<FormItem><FormLabel>البراند</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="اختر براند" /></SelectTrigger></FormControl><SelectContent>{brands.map((b) => (<SelectItem key={b.id} value={b.name}>{b.name}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="manager" render={({ field }) => (<FormItem><FormLabel>مدير الفرع</FormLabel><FormControl><Input placeholder="اسم مدير الفرع" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="regionalManager" render={({ field }) => (<FormItem><FormLabel>المدير الإقليمي</FormLabel><FormControl><Input placeholder="اسم المدير الإقليمي" {...field} /></FormControl><FormMessage /></FormItem>)} />
               </div>
-               <FormField
-                control={form.control}
-                name="location"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>رابط الموقع (اختياري)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="https://maps.google.com/..." {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <FormField control={form.control} name="location" render={({ field }) => (<FormItem><FormLabel>رابط الموقع (اختياري)</FormLabel><FormControl><Input placeholder="https://maps.google.com/..." {...field} /></FormControl><FormMessage /></FormItem>)} />
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>إلغاء</Button>
                 <Button type="submit">حفظ</Button>
@@ -508,9 +306,7 @@ export default function BranchesPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle>
-            <AlertDialogDescription>
-              سيتم حذف بيانات الفرع "{branchToDelete?.name}" نهائياً. لا يمكن التراجع عن هذا الإجراء.
-            </AlertDialogDescription>
+            <AlertDialogDescription>سيتم حذف بيانات الفرع "{branchToDelete?.name}" نهائياً. لا يمكن التراجع عن هذا الإجراء.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>إلغاء</AlertDialogCancel>

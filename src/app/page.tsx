@@ -23,24 +23,41 @@ import {
   Gavel,
   LineChart,
 } from 'lucide-react';
-import { violations as initialViolations, Violation, Objection, objections as initialObjections } from '@/lib/mock-data';
+import { Violation, Objection } from '@/lib/mock-data';
 import { PageHeader } from '@/components/page-header';
 import { DashboardCharts } from '@/components/dashboard-charts';
 import { Skeleton } from '@/components/ui/skeleton';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { useToast } from '@/hooks/use-toast';
 
 
 export default function Dashboard() {
   const [violations, setViolations] = useState<Violation[]>([]);
   const [objections, setObjections] = useState<Objection[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
-    const storedViolations = localStorage.getItem('violations');
-    const storedObjections = localStorage.getItem('objections');
-    setViolations(storedViolations ? JSON.parse(storedViolations) : initialViolations);
-    setObjections(storedObjections ? JSON.parse(storedObjections) : initialObjections);
-    setIsLoaded(true);
-  }, []);
+    async function fetchData() {
+      try {
+        const violationsSnapshot = await getDocs(collection(db, 'violations'));
+        const violationsData = violationsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Violation[];
+        setViolations(violationsData);
+        
+        const objectionsSnapshot = await getDocs(collection(db, 'objections'));
+        const objectionsData = objectionsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Objection[];
+        setObjections(objectionsData);
+
+      } catch (error) {
+        console.error('Failed to fetch dashboard data from Firestore', error);
+        toast({ variant: 'destructive', description: 'فشل في تحميل بيانات لوحة المعلومات.' });
+      } finally {
+        setIsLoaded(true);
+      }
+    }
+    fetchData();
+  }, [toast]);
 
   const dashboardStats = useMemo(() => {
     const totalViolations = violations.length;
@@ -68,7 +85,7 @@ export default function Dashboard() {
   }, [violations, objections]);
 
   const recentViolations = useMemo(() => {
-      return violations.slice(0, 5);
+      return [...violations].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
   }, [violations]);
 
   if (!isLoaded) {

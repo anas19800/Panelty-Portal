@@ -1,80 +1,28 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { MoreHorizontal, PlusCircle, Upload, Paperclip } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  objections as initialObjections,
-  violations as initialViolations,
-  Objection,
-  Violation,
-  Attachment,
-} from '@/lib/mock-data';
+import { Objection, Violation, Attachment } from '@/lib/mock-data';
+import { db } from '@/lib/firebase';
+import { collection, getDocs, doc, addDoc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 
 const objectionSchema = z.object({
   violationId: z.string({ required_error: 'الرجاء اختيار مخالفة.' }),
@@ -95,30 +43,22 @@ export default function ObjectionsPage() {
   const [attachments, setAttachments] = useState<File[]>([]);
 
   useEffect(() => {
-    try {
-      const storedObjections = localStorage.getItem('objections');
-      const storedViolations = localStorage.getItem('violations');
-      setObjections(storedObjections ? JSON.parse(storedObjections) : initialObjections);
-      setViolations(storedViolations ? JSON.parse(storedViolations) : initialViolations);
-    } catch (error) {
-      console.error('Failed to load data from localStorage', error);
-      setObjections(initialObjections);
-      setViolations(initialViolations);
-    } finally {
-      setIsLoaded(true);
+    async function fetchData() {
+        try {
+            const objectionsSnapshot = await getDocs(collection(db, 'objections'));
+            setObjections(objectionsSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })) as Objection[]);
+            
+            const violationsSnapshot = await getDocs(collection(db, 'violations'));
+            setViolations(violationsSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })) as Violation[]);
+        } catch (error) {
+            console.error('Failed to load data from Firestore', error);
+            toast({ variant: 'destructive', description: 'فشل تحميل البيانات من قاعدة البيانات.' });
+        } finally {
+            setIsLoaded(true);
+        }
     }
-  }, []);
-
-  useEffect(() => {
-    if (isLoaded) {
-      try {
-        localStorage.setItem('objections', JSON.stringify(objections));
-      } catch (error) {
-        console.error('Failed to save objections to localStorage', error);
-        toast({ variant: 'destructive', description: 'فشل في حفظ بيانات الاعتراضات.' });
-      }
-    }
-  }, [objections, isLoaded, toast]);
+    fetchData();
+  }, [toast]);
 
   const form = useForm<ObjectionFormValues>({
     resolver: zodResolver(objectionSchema),
@@ -136,28 +76,39 @@ export default function ObjectionsPage() {
     form.reset();
   };
 
-  const onSubmit = (values: ObjectionFormValues) => {
+  const onSubmit = async (values: ObjectionFormValues) => {
     const violation = violations.find(v => v.id === values.violationId);
     if (!violation) {
         toast({ variant: 'destructive', description: 'المخالفة المحددة غير موجودة.' });
         return;
     }
-
-    const newObjection: Objection = {
-        id: `o${new Date().getTime()}`,
-        number: `OBJ-${String(objections.length + 1).padStart(3, '0')}`,
-        violationId: violation.id,
-        violationNumber: violation.violationNumber,
-        branch: violation.branchName,
-        date: new Date().toISOString().split('T')[0],
-        status: 'قيد المراجعة',
-        details: values.details,
-        attachments: attachments.map(file => ({ name: file.name, type: file.type })),
-    };
     
-    setObjections([newObjection, ...objections]);
-    toast({ description: 'تم تسجيل الاعتراض بنجاح.' });
-    handleCloseDialog();
+    // NOTE: File upload to Firebase Storage would be implemented here in a real app.
+    // For this prototype, we'll just save the file names.
+    const attachmentData: Attachment[] = attachments.map(file => ({ name: file.name, type: file.type }));
+
+    try {
+        const newObjectionData = {
+            number: `OBJ-${String(objections.length + 1).padStart(3, '0')}`,
+            violationId: violation.id,
+            violationNumber: violation.violationNumber,
+            branch: violation.branchName,
+            date: new Date().toISOString().split('T')[0],
+            status: 'قيد المراجعة' as const,
+            details: values.details,
+            attachments: attachmentData,
+            createdAt: serverTimestamp(),
+        };
+
+        const docRef = await addDoc(collection(db, 'objections'), newObjectionData);
+        
+        setObjections([{ ...newObjectionData, id: docRef.id }, ...objections]);
+        toast({ description: 'تم تسجيل الاعتراض بنجاح.' });
+        handleCloseDialog();
+    } catch (error) {
+        console.error("Error saving objection:", error);
+        toast({ variant: 'destructive', description: 'فشل في حفظ الاعتراض.' });
+    }
   };
 
   const handleDeleteClick = (objection: Objection) => {
@@ -165,18 +116,32 @@ export default function ObjectionsPage() {
     setDeleteDialogOpen(true);
   };
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (objectionToDelete) {
-      setObjections(objections.filter(o => o.id !== objectionToDelete.id));
-      toast({ description: 'تم حذف الاعتراض بنجاح.' });
-      setDeleteDialogOpen(false);
-      setObjectionToDelete(null);
+        try {
+            await deleteDoc(doc(db, "objections", objectionToDelete.id));
+            setObjections(objections.filter(o => o.id !== objectionToDelete.id));
+            toast({ description: 'تم حذف الاعتراض بنجاح.' });
+        } catch (error) {
+            console.error("Error deleting objection: ", error);
+            toast({ variant: 'destructive', description: 'فشل في حذف الاعتراض.' });
+        } finally {
+            setDeleteDialogOpen(false);
+            setObjectionToDelete(null);
+        }
     }
   };
 
-  const handleStatusChange = (objectionId: string, status: Objection['status']) => {
-    setObjections(objections.map(o => o.id === objectionId ? { ...o, status } : o));
-    toast({ description: `تم تغيير حالة الاعتراض إلى "${status}".`});
+  const handleStatusChange = async (objectionId: string, status: Objection['status']) => {
+    try {
+        const objectionRef = doc(db, 'objections', objectionId);
+        await updateDoc(objectionRef, { status: status });
+        setObjections(objections.map(o => o.id === objectionId ? { ...o, status } : o));
+        toast({ description: `تم تغيير حالة الاعتراض إلى "${status}".`});
+    } catch (error) {
+        console.error("Error updating status: ", error);
+        toast({ variant: 'destructive', description: 'فشل في تحديث الحالة.' });
+    }
   };
 
   if (!isLoaded) {
