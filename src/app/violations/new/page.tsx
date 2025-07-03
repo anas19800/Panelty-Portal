@@ -232,7 +232,7 @@ export default function NewViolationPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>رقم المخالفة</FormLabel>
-                      <FormControl><Input placeholder="e.g., 123456789" {...field} /></FormControl>
+                      <FormControl><Input placeholder="e.g., 123456789" {...field} value={field.value ?? ''} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -275,7 +275,7 @@ export default function NewViolationPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>قيمة المخالفة</FormLabel>
-                      <FormControl><Input type="number" placeholder="0.00" {...field} /></FormControl>
+                      <FormControl><Input type="number" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
