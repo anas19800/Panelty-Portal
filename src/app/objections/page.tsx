@@ -4,13 +4,14 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { format } from 'date-fns';
 
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { MoreHorizontal, PlusCircle, Upload, Paperclip } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Upload, Paperclip, CalendarIcon } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -25,8 +26,13 @@ import { db } from '@/lib/firebase';
 import { collection, getDocs, doc, addDoc, updateDoc, deleteDoc, serverTimestamp, query, where } from 'firebase/firestore';
 import { useAuth } from '@/context/auth-context';
 import { getPermission, PERMISSIONS, ROLES } from '@/lib/permissions';
+import { cn } from '@/lib/utils';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 
 const objectionSchema = z.object({
+  number: z.string().min(1, 'الرجاء إدخال رقم الاعتراض.'),
+  date: z.date({ required_error: 'الرجاء تحديد تاريخ الاعتراض.' }),
   violationId: z.string({ required_error: 'الرجاء اختيار مخالفة.' }),
   details: z.string().min(10, 'الرجاء كتابة تفاصيل الاعتراض (10 أحرف على الأقل).'),
 });
@@ -121,11 +127,11 @@ export default function ObjectionsPage() {
 
     try {
         const newObjectionData = {
-            number: `OBJ-${String(objections.length + 1).padStart(3, '0')}`,
+            number: values.number,
             violationId: violation.id,
             violationNumber: violation.violationNumber,
             branch: violation.branchName,
-            date: new Date().toISOString().split('T')[0],
+            date: format(values.date, 'yyyy-MM-dd'),
             status: 'قيد المراجعة' as const,
             details: values.details,
             attachments: attachmentData,
@@ -289,11 +295,15 @@ export default function ObjectionsPage() {
           <DialogHeader>
             <DialogTitle>تسجيل اعتراض جديد</DialogTitle>
             <DialogDescription>
-              اختر المخالفة التي ترغب بالاعتراض عليها وأدخل تفاصيل الاعتراض.
+              أدخل بيانات الاعتراض والمخالفة المرتبطة به.
             </DialogDescription>
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField control={form.control} name="number" render={({ field }) => (<FormItem><FormLabel>رقم الاعتراض</FormLabel><FormControl><Input placeholder="أدخل رقم الاعتراض" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                  <FormField control={form.control} name="date" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>تاريخ الاعتراض</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full justify-start text-right font-normal", !field.value && "text-muted-foreground")}><CalendarIcon className="ml-2 h-4 w-4" />{field.value ? format(field.value, "PPP") : <span>اختر تاريخ</span>}</Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)} />
+                </div>
                 <FormField
                   control={form.control}
                   name="violationId"
