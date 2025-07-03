@@ -23,7 +23,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Objection, Violation, Attachment } from '@/lib/mock-data';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, doc, addDoc, updateDoc, deleteDoc, serverTimestamp, query, where } from 'firebase/firestore';
+import { collection, getDocs, doc, addDoc, updateDoc, deleteDoc, serverTimestamp, query, where, writeBatch } from 'firebase/firestore';
 import { useAuth } from '@/context/auth-context';
 import { getPermission, PERMISSIONS, ROLES } from '@/lib/permissions';
 import { cn } from '@/lib/utils';
@@ -173,11 +173,32 @@ export default function ObjectionsPage() {
   };
 
   const handleStatusChange = async (objectionId: string, status: Objection['status']) => {
+    const objection = objections.find(o => o.id === objectionId);
+    if (!objection) {
+        toast({ variant: 'destructive', description: 'لم يتم العثور على الاعتراض.' });
+        return;
+    }
+
     try {
+        const batch = writeBatch(db);
         const objectionRef = doc(db, 'objections', objectionId);
-        await updateDoc(objectionRef, { status: status });
+        batch.update(objectionRef, { status: status });
+
+        // If the objection is accepted, update the violation status to 'ملفية' (Filed/Cancelled)
+        if (status === 'مقبول') {
+            const violationRef = doc(db, 'violations', objection.violationId);
+            batch.update(violationRef, { status: 'ملفية' });
+        }
+
+        await batch.commit();
+
         setObjections(objections.map(o => o.id === objectionId ? { ...o, status } : o));
-        toast({ description: `تم تغيير حالة الاعتراض إلى "${status}".`});
+        
+        if (status === 'مقبول') {
+            toast({ description: 'تم قبول الاعتراض وتحديث حالة المخالفة إلى "ملفية".' });
+        } else {
+            toast({ description: `تم تغيير حالة الاعتراض إلى "${status}".`});
+        }
     } catch (error) {
         console.error("Error updating status: ", error);
         toast({ variant: 'destructive', description: 'فشل في تحديث الحالة.' });
