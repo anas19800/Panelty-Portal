@@ -5,8 +5,9 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { format, addDays, parseISO } from 'date-fns';
-import { CalendarIcon, Upload } from 'lucide-react';
+import { CalendarIcon, Upload, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
@@ -48,12 +49,16 @@ function EditViolationPageContent({ violationId }: { violationId: string }) {
   const { toast } = useToast();
   const router = useRouter();
   const [branchDetails, setBranchDetails] = useState<Branch | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const [regions, setRegions] = useState<Region[]>([]);
   const [allBrands, setAllBrands] = useState<Brand[]>([]);
   const [allBranches, setAllBranches] = useState<Branch[]>([]);
   const [categories, setCategories] = useState<ViolationCategory[]>([]);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
+
+  const [existingImageUrls, setExistingImageUrls] = useState<string[]>([]);
+  const [newImageFiles, setNewImageFiles] = useState<File[]>([]);
   
   const form = useForm<ViolationFormValues>({
     resolver: zodResolver(violationFormSchema),
@@ -101,6 +106,7 @@ function EditViolationPageContent({ violationId }: { violationId: string }) {
                 
                 const branch = branchesData.find(b => b.id === violationData.branchId);
                 setBranchDetails(branch || null);
+                setExistingImageUrls(violationData.imageUrls || []);
 
             } else {
                 toast({ variant: 'destructive', description: 'لم يتم العثور على المخالفة.' });
@@ -137,13 +143,33 @@ function EditViolationPageContent({ violationId }: { violationId: string }) {
   useEffect(() => { form.resetField('branchId', { defaultValue: form.getValues('branchId') }); }, [watchBrand, form]);
   useEffect(() => { form.resetField('subCategory', { defaultValue: '' }); }, [watchCategory, form]);
 
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files) {
+        setNewImageFiles(Array.from(event.target.files));
+    }
+  };
+
+  const handleRemoveExistingImage = (indexToRemove: number) => {
+      setExistingImageUrls(prev => prev.filter((_, index) => index !== indexToRemove));
+  };
+
   async function onSubmit(data: ViolationFormValues) {
+    setIsSubmitting(true);
     try {
         const branch = allBranches.find(b => b.id === data.branchId);
         if (!branch) throw new Error("Branch not found");
 
         const category = categories.find(c => c.mainCategoryCode === data.category);
         const subCategory = category?.subCategories.find(sc => sc.code === data.subCategory);
+
+        const storage = getStorage();
+        const uploadedImageUrls: string[] = [...existingImageUrls];
+        for (const file of newImageFiles) {
+            const storageRef = ref(storage, `violations/${violationId}/${file.name}-${Date.now()}`);
+            const snapshot = await uploadBytes(storageRef, file);
+            const downloadURL = await getDownloadURL(snapshot.ref);
+            uploadedImageUrls.push(downloadURL);
+        }
 
         const updatedViolationData = {
             violationNumber: data.violationNumber,
@@ -159,6 +185,7 @@ function EditViolationPageContent({ violationId }: { violationId: string }) {
             brand: branch.brand,
             region: branch.region,
             city: branch.city,
+            imageUrls: uploadedImageUrls,
         };
         
         const violationRef = doc(db, 'violations', violationId);
@@ -170,6 +197,8 @@ function EditViolationPageContent({ violationId }: { violationId: string }) {
     } catch (error) {
         console.error('Failed to save violation:', error);
         toast({ variant: 'destructive', description: 'حدث خطأ أثناء تحديث المخالفة.' });
+    } finally {
+        setIsSubmitting(false);
     }
   }
 
@@ -218,25 +247,52 @@ function EditViolationPageContent({ violationId }: { violationId: string }) {
                 <FormField control={form.control} name="fineAmount" render={({ field }) => (<FormItem><FormLabel>قيمة المخالفة</FormLabel><FormControl><Input type="number" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={form.control} name="category" render={({ field }) => (<FormItem><FormLabel>الفئة العامة</FormLabel><Select onValueChange={field.onChange} value={field.value || ''}><FormControl><SelectTrigger><SelectValue placeholder="اختر فئة" /></SelectTrigger></FormControl><SelectContent>{categories.map(c => <SelectItem key={c.mainCategoryCode} value={c.mainCategoryCode}>{c.mainCategory}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
                 <FormField control={form.control} name="subCategory" render={({ field }) => (<FormItem><FormLabel>الفئة الفرعية</FormLabel><Select onValueChange={field.onChange} value={field.value || ''} disabled={!watchCategory}><FormControl><SelectTrigger><SelectValue placeholder="اختر فئة فرعية" /></SelectTrigger></FormControl><SelectContent>{availableSubCategories.map(sc => <SelectItem key={sc.code} value={sc.code}>{`${sc.code} - ${sc.name}`}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
+                
                 <div className="md:col-span-2 space-y-2">
-                  <FormLabel>الصور المرفقة</FormLabel>
-                  <div className="flex items-center justify-center w-full">
-                    <label htmlFor="dropzone-file" className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted">
-                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                        <Upload className="w-8 h-8 mb-4 text-muted-foreground" />
-                        <p className="mb-2 text-sm text-muted-foreground"><span className="font-semibold">انقر للرفع</span> أو اسحب وأفلت</p>
-                        <p className="text-xs text-muted-foreground">PNG, JPG</p>
-                      </div>
-                      <Input id="dropzone-file" type="file" className="hidden" multiple />
-                    </label>
-                  </div>
+                    <FormLabel>الصور المرفقة</FormLabel>
+                    {existingImageUrls.length > 0 ? (
+                        <div className="flex flex-wrap gap-2 mb-4">
+                            {existingImageUrls.map((url, index) => (
+                                <div key={index} className="relative group">
+                                    <a href={url} target="_blank" rel="noopener noreferrer">
+                                        <img src={url} alt={`Violation image ${index + 1}`} className="h-24 w-24 object-cover rounded-md border" />
+                                    </a>
+                                    <Button type="button" size="icon" variant="destructive" onClick={() => handleRemoveExistingImage(index)} className="absolute -top-2 -right-2 h-6 w-6 rounded-full opacity-0 transition-opacity group-hover:opacity-100">
+                                        <X className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            ))}
+                        </div>
+                    ) : <p className="text-sm text-muted-foreground">لا توجد صور مرفقة حالياً.</p>}
+
+                    <div className="flex items-center justify-center w-full">
+                        <label htmlFor="dropzone-file" className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted">
+                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                            <Upload className="w-8 h-8 mb-4 text-muted-foreground" />
+                            <p className="mb-2 text-sm text-muted-foreground"><span className="font-semibold">إضافة صور جديدة</span> أو اسحب وأفلت</p>
+                            <p className="text-xs text-muted-foreground">PNG, JPG</p>
+                        </div>
+                        <Input id="dropzone-file" type="file" className="hidden" multiple onChange={handleFileChange} />
+                        </label>
+                    </div>
+                    {newImageFiles.length > 0 && (
+                        <div className="space-y-1 pt-2 text-sm text-muted-foreground">
+                            <p className="font-medium text-foreground">الملفات الجديدة المضافة:</p>
+                            <ul className="list-disc list-inside">
+                                {newImageFiles.map((file, index) => (
+                                    <li key={index}>{file.name}</li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
                 </div>
+
                 <FormField control={form.control} name="status" render={({ field }) => (<FormItem className="md:col-span-2 space-y-2"><FormLabel>حالة المخالفة</FormLabel><FormControl><RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4"><FormItem className="flex items-center space-x-2 space-x-reverse"><FormControl><RadioGroupItem value="paid" id="paid" /></FormControl><FormLabel htmlFor="paid" className="font-normal">مدفوعة</FormLabel></FormItem><FormItem className="flex items-center space-x-2 space-x-reverse"><FormControl><RadioGroupItem value="unpaid" id="unpaid" /></FormControl><FormLabel htmlFor="unpaid" className="font-normal">غير مدفوعة</FormLabel></FormItem><FormItem className="flex items-center space-x-2 space-x-reverse"><FormControl><RadioGroupItem value="filed" id="filed" /></FormControl><FormLabel htmlFor="filed" className="font-normal">ملفية</FormLabel></FormItem></RadioGroup></FormControl><FormMessage /></FormItem>)} />
               </CardContent>
             </Card>
             <div className="flex justify-end gap-2">
                 <Button variant="outline" type="button" onClick={() => router.push('/violations')}>إلغاء</Button>
-                <Button type="submit">حفظ التعديلات</Button>
+                <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'جاري الحفظ...' : 'حفظ التعديلات'}</Button>
             </div>
           </div>
           <div className="lg:col-span-1">

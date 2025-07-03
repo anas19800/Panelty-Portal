@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { FilePenLine, MoreHorizontal, PlusCircle, Trash2 } from 'lucide-react';
+import { FilePenLine, MoreHorizontal, PlusCircle, Trash2, Camera } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Violation } from '@/lib/mock-data';
@@ -126,6 +126,7 @@ export default function ViolationsPage() {
                   <TableHead>تاريخ الرصد</TableHead>
                   <TableHead>آخر موعد للاعتراض</TableHead>
                   <TableHead>القيمة</TableHead>
+                  <TableHead>الصور</TableHead>
                   <TableHead>الحالة</TableHead>
                   {canWrite && <TableHead><span className="sr-only">Actions</span></TableHead>}
                 </TableRow>
@@ -144,6 +145,16 @@ export default function ViolationsPage() {
                         style: 'currency',
                         currency: 'SAR',
                       })}
+                    </TableCell>
+                    <TableCell>
+                      {violation.imageUrls && violation.imageUrls.length > 0 ? (
+                          <div className="flex items-center gap-1 text-muted-foreground">
+                              <Camera className="h-4 w-4" />
+                              <span>{violation.imageUrls.length}</span>
+                          </div>
+                      ) : (
+                          <span>-</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Badge

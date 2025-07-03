@@ -13,6 +13,7 @@ export type Violation = {
   brand: string;
   region: string;
   city: string;
+  imageUrls?: string[];
 };
 
 export type Branch = {

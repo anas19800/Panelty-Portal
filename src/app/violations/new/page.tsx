@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { format, addDays } from 'date-fns';
 import { CalendarIcon, Upload } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
@@ -48,6 +49,8 @@ function NewViolationPageContent() {
   const { toast } = useToast();
   const router = useRouter();
   const [branchDetails, setBranchDetails] = useState<Branch | null>(null);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [regions, setRegions] = useState<Region[]>([]);
   const [allBrands, setAllBrands] = useState<Brand[]>([]);
@@ -111,13 +114,31 @@ function NewViolationPageContent() {
     }
   }, [watchViolationDate, form]);
 
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files) {
+      setImageFiles(Array.from(event.target.files));
+    }
+  };
+
   async function onSubmit(data: ViolationFormValues) {
+    setIsSubmitting(true);
     try {
         const branch = allBranches.find(b => b.id === data.branchId);
         if (!branch) throw new Error("Branch not found");
 
         const category = categories.find(c => c.mainCategoryCode === data.category);
         const subCategory = category?.subCategories.find(sc => sc.code === data.subCategory);
+
+        let imageUrls: string[] = [];
+        if (imageFiles.length > 0) {
+            const storage = getStorage();
+            for (const file of imageFiles) {
+                const storageRef = ref(storage, `violations/${data.violationNumber}-${Date.now()}/${file.name}`);
+                const snapshot = await uploadBytes(storageRef, file);
+                const downloadURL = await getDownloadURL(snapshot.ref);
+                imageUrls.push(downloadURL);
+            }
+        }
 
         const newViolationData = {
             violationNumber: data.violationNumber,
@@ -133,6 +154,7 @@ function NewViolationPageContent() {
             brand: branch.brand,
             region: branch.region,
             city: branch.city,
+            imageUrls: imageUrls,
         };
         
         await addDoc(collection(db, "violations"), newViolationData);
@@ -143,6 +165,8 @@ function NewViolationPageContent() {
     } catch (error) {
         console.error('Failed to save violation:', error);
         toast({ variant: 'destructive', description: 'حدث خطأ أثناء حفظ المخالفة.' });
+    } finally {
+        setIsSubmitting(false);
     }
   }
 
@@ -200,16 +224,26 @@ function NewViolationPageContent() {
                         <p className="mb-2 text-sm text-muted-foreground"><span className="font-semibold">انقر للرفع</span> أو اسحب وأفلت</p>
                         <p className="text-xs text-muted-foreground">PNG, JPG</p>
                       </div>
-                      <Input id="dropzone-file" type="file" className="hidden" multiple />
+                      <Input id="dropzone-file" type="file" className="hidden" multiple onChange={handleFileChange} />
                     </label>
                   </div>
+                  {imageFiles.length > 0 && (
+                    <div className="space-y-1 pt-2 text-sm text-muted-foreground">
+                        <p className="font-medium text-foreground">الملفات المختارة:</p>
+                        <ul className="list-disc list-inside">
+                            {imageFiles.map((file, index) => (
+                                <li key={index}>{file.name}</li>
+                            ))}
+                        </ul>
+                    </div>
+                  )}
                 </div>
                 <FormField control={form.control} name="status" render={({ field }) => (<FormItem className="md:col-span-2 space-y-2"><FormLabel>حالة المخالفة</FormLabel><FormControl><RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4"><FormItem className="flex items-center space-x-2 space-x-reverse"><FormControl><RadioGroupItem value="paid" id="paid" /></FormControl><FormLabel htmlFor="paid" className="font-normal">مدفوعة</FormLabel></FormItem><FormItem className="flex items-center space-x-2 space-x-reverse"><FormControl><RadioGroupItem value="unpaid" id="unpaid" /></FormControl><FormLabel htmlFor="unpaid" className="font-normal">غير مدفوعة</FormLabel></FormItem><FormItem className="flex items-center space-x-2 space-x-reverse"><FormControl><RadioGroupItem value="filed" id="filed" /></FormControl><FormLabel htmlFor="filed" className="font-normal">ملفية</FormLabel></FormItem></RadioGroup></FormControl><FormMessage /></FormItem>)} />
               </CardContent>
             </Card>
             <div className="flex justify-end gap-2">
                 <Button variant="outline" type="button" onClick={() => {form.reset(); setBranchDetails(null); router.back();}}>إلغاء</Button>
-                <Button type="submit">حفظ المخالفة</Button>
+                <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'جاري الحفظ...' : 'حفظ المخالفة'}</Button>
             </div>
           </div>
           <div className="lg:col-span-1">
