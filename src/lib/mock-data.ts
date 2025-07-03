@@ -53,6 +53,14 @@ export type Objection = {
   attachments: Attachment[];
 };
 
+export type User = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  status: 'نشط' | 'غير نشط';
+};
+
 export const regions = ["المنطقة الوسطى", "المنطقة الغربية", "المنطقة الشرقية"];
 export const brands = ["براند ألف", "براند باء", "براند جيم"];
 
@@ -76,6 +84,14 @@ export const objections: Objection[] = [
     { id: 'o1', number: 'OBJ-001', violationId: 'v3', violationNumber: 'V-003', branch: 'فرع الخبر', date: '2024-05-12', status: 'مقبول', details: 'الاعتراض الأول', attachments: [] },
     { id: 'o2', number: 'OBJ-002', violationId: 'v5', violationNumber: 'V-005', branch: 'فرع الياسمين', date: '2024-05-18', status: 'قيد المراجعة', details: 'الاعتراض الثاني', attachments: [] },
     { id: 'o3', number: 'OBJ-003', violationId: 'v2', violationNumber: 'V-002', branch: 'فرع التحلية', date: '2024-05-20', status: 'مرفوض', details: 'الاعتراض الثالث', attachments: [{name: 'photo.jpg', type: 'image/jpeg'}] },
+];
+
+export const users: User[] = [
+    { id: 'u1', name: 'عبدالله الصالح', email: 'a.saleh@example.com', role: 'مسؤول جودة', status: 'نشط' },
+    { id: 'u2', name: 'فاطمة حمد', email: 'f.hamad@example.com', role: 'مدير إقليمي', status: 'نشط' },
+    { id: 'u3', name: 'سعد العتيبي', email: 's.otaibi@example.com', role: 'مدير فرع', status: 'غير نشط' },
+    { id: 'u4', name: 'علي الأحمد', email: 'a.ahmad@example.com', role: 'إدارة عليا', status: 'نشط' },
+    { id: 'u5', name: 'نورة السالم', email: 'n.salem@example.com', role: 'مسؤول نظام', status: 'نشط' },
 ];
 
 export const recentViolations = violations.slice(0,5).map(v => ({
