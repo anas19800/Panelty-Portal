@@ -266,10 +266,10 @@ function EditViolationPageContent({ violationId }: { violationId: string }) {
   );
 }
 
-export default function EditViolationPage({ params }: { params: { id: string } }) {
+export default function EditViolationPage({ params: { id } }: { params: { id: string } }) {
     return (
         <PageGuard feature={PERMISSIONS.VIOLATIONS} requiredPermission="write">
-            <EditViolationPageContent violationId={params.id} />
+            <EditViolationPageContent violationId={id} />
         </PageGuard>
     )
 }
