@@ -19,9 +19,10 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from "@/hooks/use-toast";
 import { cn } from '@/lib/utils';
-import { Branch, ViolationCategory, Violation } from '@/lib/mock-data';
+import { Branch, ViolationCategory } from '@/lib/mock-data';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, addDoc } from 'firebase/firestore';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const violationFormSchema = z.object({
   region: z.string({ required_error: "الرجاء اختيار منطقة." }),
