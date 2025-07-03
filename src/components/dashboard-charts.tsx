@@ -95,7 +95,7 @@ export function DashboardCharts({ violations }: { violations: Violation[] }) {
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={violationsByBrand} layout="vertical" margin={{ left: 20 }} barCategoryGap="40%">
                 <XAxis type="number" dataKey="violations" hide />
-                <YAxis dataKey="brand" type="category" tickLine={false} axisLine={false} tickMargin={10} width={80} tick={{ dx: -5 }} />
+                <YAxis dataKey="brand" type="category" tickLine={false} axisLine={false} tickMargin={10} width={80} tick={{ dx: -10 }} />
                 <ChartTooltip content={<ChartTooltipContent />} />
                 <Bar dataKey="violations" radius={5}>
                   {violationsByBrand.map((entry) => (
