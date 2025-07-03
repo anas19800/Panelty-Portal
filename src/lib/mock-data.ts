@@ -25,9 +25,15 @@ export type Branch = {
   location: string;
 };
 
+export type ViolationSubCategory = {
+  code: string;
+  name: string;
+};
+
 export type ViolationCategory = {
+  mainCategoryCode: string;
   mainCategory: string;
-  subCategories: string[];
+  subCategories: ViolationSubCategory[];
 };
 
 export const regions = ["المنطقة الوسطى", "المنطقة الغربية", "المنطقة الشرقية"];
@@ -72,27 +78,57 @@ export const violationsByStatus = [
 
 export const violationCategories: ViolationCategory[] = [
     {
+        mainCategoryCode: "01",
         mainCategory: "متطلبات الموقع والمبنى",
-        subCategories: ["عدم ملاءمة الموقع", "عدم وجود ترخيص بناء", "مخالفة في مساحة المحل"],
+        subCategories: [
+            { code: "01-01", name: "عدم ملاءمة الموقع" },
+            { code: "01-02", name: "عدم وجود ترخيص بناء" },
+            { code: "01-03", name: "مخالفة في مساحة المحل" },
+        ],
     },
     {
+        mainCategoryCode: "02",
         mainCategory: "التجهيزات الداخلية",
-        subCategories: ["عدم كفاءة الإضاءة", "عدم كفاءة التهوية", "الأرضيات غير سهلة التنظيف"],
+        subCategories: [
+            { code: "02-01", name: "عدم كفاءة الإضاءة" },
+            { code: "02-02", name: "عدم كفاءة التهوية" },
+            { code: "02-03", name: "الأرضيات غير سهلة التنظيف" },
+        ],
     },
     {
+        mainCategoryCode: "03",
         mainCategory: "المرافق الصحية",
-        subCategories: ["عدم وجود دورات مياه كافية", "عدم نظافة دورات المياه", "عدم توفر مغاسل"],
+        subCategories: [
+            { code: "03-01", name: "عدم وجود دورات مياه كافية" },
+            { code: "03-02", name: "عدم نظافة دورات المياه" },
+            { code: "03-03", name: "عدم توفر مغاسل" },
+        ],
     },
     {
+        mainCategoryCode: "04",
         mainCategory: "مكافحة الحشرات والقوارض",
-        subCategories: ["عدم وجود برنامج مكافحة", "وجود حشرات أو قوارض", "عدم وجود مصائد فعالة"],
+        subCategories: [
+            { code: "04-01", name: "عدم وجود برنامج مكافحة" },
+            { code: "04-02", name: "وجود حشرات أو قوارض" },
+            { code: "04-03", name: "عدم وجود مصائد فعالة" },
+        ],
     },
     {
+        mainCategoryCode: "05",
         mainCategory: "العاملون",
-        subCategories: ["عدم وجود شهادات صحية", "تدني مستوى النظافة الشخصية", "ممارسة سلوكيات خاطئة"],
+        subCategories: [
+            { code: "05-01", name: "عدم وجود شهادات صحية" },
+            { code: "05-02", name: "تدني مستوى النظافة الشخصية" },
+            { code: "05-03", name: "ممارسة سلوكيات خاطئة" },
+        ],
     },
     {
+        mainCategoryCode: "06",
         mainCategory: "المواد الغذائية",
-        subCategories: ["استخدام مواد أولية منتهية الصلاحية", "تخزين غير سليم للمواد الغذائية", "عدم وجود بطاقات تعريفية"],
+        subCategories: [
+            { code: "06-01", name: "استخدام مواد أولية منتهية الصلاحية" },
+            { code: "06-02", name: "تخزين غير سليم للمواد الغذائية" },
+            { code: "06-03", name: "عدم وجود بطاقات تعريفية" },
+        ],
     },
 ];
