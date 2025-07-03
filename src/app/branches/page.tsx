@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { MoreHorizontal, PlusCircle } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Upload } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
@@ -87,6 +88,7 @@ type BranchFormValues = z.infer<typeof branchSchema>;
 
 export default function BranchesPage() {
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [regions, setRegions] = useState<string[]>([]);
@@ -205,6 +207,76 @@ export default function BranchesPage() {
     setDialogOpen(false);
   };
 
+  const handleFileImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json<any>(worksheet);
+
+        const newBranches: Branch[] = jsonData.map((row, index) => {
+          const name = row['اسم الفرع']?.toString().trim();
+          const city = row['المدينة']?.toString().trim();
+          
+          if (!name || !city) {
+            console.warn(`Skipping row ${index + 2} due to missing data.`);
+            return null;
+          }
+
+          return {
+            id: `b${new Date().getTime()}${index}`,
+            name: name,
+            city: city,
+            region: row['المنطقة']?.toString().trim() || '',
+            brand: row['البراند']?.toString().trim() || '',
+            manager: row['مدير الفرع']?.toString().trim() || '',
+            regionalManager: row['المدير الإقليمي']?.toString().trim() || '',
+            location: row['رابط الموقع']?.toString().trim() || '',
+          };
+        }).filter((branch): branch is Branch => branch !== null);
+
+        if (newBranches.length > 0) {
+          setBranches(prev => [...prev, ...newBranches]);
+          toast({
+            description: `تم استيراد ${newBranches.length} فرع بنجاح.`,
+          });
+        } else {
+            toast({
+                variant: 'destructive',
+                description: 'لم يتم العثور على بيانات صالحة في الملف. يرجى التحقق من أسماء الأعمدة.',
+            });
+        }
+
+      } catch (error) {
+        console.error("Error processing Excel file:", error);
+        toast({
+          variant: 'destructive',
+          description: 'حدث خطأ أثناء معالجة الملف. تأكد من أن الملف بالتنسيق الصحيح.',
+        });
+      } finally {
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+      }
+    };
+    reader.onerror = (error) => {
+        console.error("FileReader error:", error);
+        toast({
+            variant: 'destructive',
+            description: 'فشل في قراءة الملف.',
+        });
+    }
+    reader.readAsArrayBuffer(file);
+  };
+
   if (!isLoaded) {
     return (
       <div className="flex flex-col gap-6">
@@ -225,8 +297,19 @@ export default function BranchesPage() {
 
   return (
     <>
+      <input
+        type="file"
+        ref={fileInputRef}
+        className="hidden"
+        accept=".xlsx, .xls, .csv"
+        onChange={handleFileImport}
+      />
       <div className="flex flex-col gap-6">
         <PageHeader title="إدارة الفروع">
+          <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+            <Upload className="mr-2 h-4 w-4" />
+            استيراد من Excel
+          </Button>
           <Button onClick={handleAddNew}>
             <PlusCircle className="mr-2 h-4 w-4" />
             إضافة فرع جديد
@@ -236,7 +319,7 @@ export default function BranchesPage() {
           <CardHeader>
             <CardTitle>قائمة الفروع</CardTitle>
             <CardDescription>
-              عرض وتعديل بيانات الفروع المسجلة في النظام.
+              عرض وتعديل بيانات الفروع المسجلة. لاستيراد ملف Excel، يجب أن يحتوي على الأعمدة: "اسم الفرع", "المدينة", "المنطقة", "البراند", "مدير الفرع", "المدير الإقليمي", "رابط الموقع".
             </CardDescription>
           </CardHeader>
           <CardContent>
