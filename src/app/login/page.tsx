@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -86,10 +87,16 @@ export default function LoginPage() {
             />
           </div>
         </CardContent>
-        <CardFooter>
+        <CardFooter className="flex-col gap-2">
           <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading ? 'جاري تسجيل الدخول...' : 'تسجيل الدخول'}
           </Button>
+          <div className="mt-2 text-center text-sm">
+            ليس لديك حساب؟{' '}
+            <Link href="/register" className="underline">
+              إنشاء حساب
+            </Link>
+          </div>
         </CardFooter>
       </form>
     </Card>
