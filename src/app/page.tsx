@@ -35,6 +35,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { violationStatusMap } from '@/lib/i18n';
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -162,7 +163,7 @@ export default function Dashboard() {
     const { filteredViolations, filteredObjections } = filteredData;
     const totalViolations = filteredViolations.length;
     const totalFines = filteredViolations.reduce((sum, v) => sum + v.amount, 0);
-    const openObjections = filteredObjections.filter((o) => o.status === 'قيد المراجعة').length;
+    const openObjections = filteredObjections.filter((o) => o.status === 'pending').length;
     const allObjectionsCount = filteredObjections.length;
 
     const categoryCounts = filteredViolations.reduce((acc, v) => {
@@ -307,9 +308,9 @@ export default function Dashboard() {
                 <SelectTrigger id="status-filter"><SelectValue placeholder="الكل" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">الكل</SelectItem>
-                  <SelectItem value="مدفوعة">مدفوعة</SelectItem>
-                  <SelectItem value="غير مدفوعة">غير مدفوعة</SelectItem>
-                  <SelectItem value="ملفية">ملفية</SelectItem>
+                  <SelectItem value="paid">مدفوعة</SelectItem>
+                  <SelectItem value="unpaid">غير مدفوعة</SelectItem>
+                  <SelectItem value="filed">ملفية</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -392,15 +393,15 @@ export default function Dashboard() {
                   <TableCell>
                     <Badge
                       variant={
-                        violation.status === 'مدفوعة'
+                        violation.status === 'paid'
                           ? 'default'
-                          : violation.status === 'غير مدفوعة'
+                          : violation.status === 'unpaid'
                           ? 'destructive'
                           : 'secondary'
                       }
                       className="bg-opacity-20 text-opacity-100"
                     >
-                      {violation.status}
+                      {violationStatusMap[violation.status as keyof typeof violationStatusMap] || violation.status}
                     </Badge>
                   </TableCell>
                 </TableRow>

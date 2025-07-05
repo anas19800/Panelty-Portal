@@ -16,6 +16,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { auth, db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
+import { ROLES } from '@/lib/permissions';
 
 const registerSchema = z.object({
   name: z.string().min(1, 'الاسم مطلوب.'),
@@ -46,8 +47,8 @@ export default function RegisterPage() {
       await addDoc(collection(db, 'users'), {
         name: values.name,
         email: values.email,
-        role: 'مسؤول جودة', // Default role for self-registered users
-        status: 'نشط',
+        role: ROLES.QUALITY_OFFICER, // Default role for self-registered users
+        status: 'active',
       });
 
       toast({

@@ -23,11 +23,12 @@ import { db } from '@/lib/firebase';
 import { collection, getDocs, doc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { PageGuard } from '@/context/auth-context';
 import { PERMISSIONS, ROLES } from '@/lib/permissions';
+import { roleMap, userStatusMap } from '@/lib/i18n';
 
 const userSchema = z.object({
   name: z.string().min(1, 'الاسم مطلوب.'),
   email: z.string().email('البريد الإلكتروني غير صحيح.'),
-  role: z.string({ required_error: 'الرجاء اختيار دور.' }),
+  role: z.nativeEnum(ROLES, { required_error: 'الرجاء اختيار دور.' }),
   branchId: z.string().optional(),
   region: z.string().optional(),
 });
@@ -75,7 +76,7 @@ function UsersPageContent() {
 
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userSchema),
-    defaultValues: { name: '', email: '', role: '', branchId: '', region: '' },
+    defaultValues: { name: '', email: '', role: undefined, branchId: '', region: '' },
   });
 
   const watchRole = form.watch('role');
@@ -83,9 +84,9 @@ function UsersPageContent() {
   useEffect(() => {
     if (dialogOpen) {
       if (editingUser) {
-        form.reset({ name: editingUser.name, email: editingUser.email, role: editingUser.role, branchId: editingUser.branchId, region: editingUser.region });
+        form.reset({ name: editingUser.name, email: editingUser.email, role: editingUser.role as keyof typeof ROLES, branchId: editingUser.branchId, region: editingUser.region });
       } else {
-        form.reset({ name: '', email: '', role: '', branchId: '', region: '' });
+        form.reset({ name: '', email: '', role: undefined, branchId: '', region: '' });
       }
     }
   }, [editingUser, dialogOpen, form]);
@@ -110,7 +111,7 @@ function UsersPageContent() {
   };
   
   const handleToggleStatus = async (user: User) => {
-    const newStatus = user.status === 'نشط' ? 'غير نشط' : 'نشط';
+    const newStatus = user.status === 'active' ? 'inactive' : 'active';
     try {
         const userRef = doc(db, "users", user.id);
         await updateDoc(userRef, { status: newStatus });
@@ -139,7 +140,7 @@ function UsersPageContent() {
         setUsers(users.map((u) => u.id === editingUser.id ? { ...u, ...dataToSave } : u));
         toast({ description: 'تم تعديل بيانات المستخدم بنجاح.' });
       } else {
-        const newUserDoc = { ...dataToSave, status: 'نشط' as const };
+        const newUserDoc = { ...dataToSave, status: 'active' as const };
         // This is not a real auth user, so an admin would need to create credentials separately
         const docRef = await addDoc(collection(db, "users"), newUserDoc);
         setUsers([...users, { ...newUserDoc, id: docRef.id } as User]);
@@ -176,15 +177,15 @@ function UsersPageContent() {
                   <TableRow key={user.id}>
                     <TableCell className="font-medium">{user.name}</TableCell>
                     <TableCell>{user.email}</TableCell>
-                    <TableCell>{user.role}{user.role === ROLES.BRANCH_MANAGER && user.branchName ? ` (${user.branchName})` : ''}{user.role === ROLES.REGIONAL_MANAGER && user.region ? ` (${user.region})` : ''}</TableCell>
-                    <TableCell><Badge variant={user.status === 'نشط' ? 'default' : 'outline'}>{user.status}</Badge></TableCell>
+                    <TableCell>{roleMap[user.role]}{user.role === ROLES.BRANCH_MANAGER && user.branchName ? ` (${user.branchName})` : ''}{user.role === ROLES.REGIONAL_MANAGER && user.region ? ` (${user.region})` : ''}</TableCell>
+                    <TableCell><Badge variant={user.status === 'active' ? 'default' : 'outline'}>{userStatusMap[user.status]}</Badge></TableCell>
                     <TableCell>
                        <DropdownMenu>
                         <DropdownMenuTrigger asChild><Button aria-haspopup="true" size="icon" variant="ghost"><MoreHorizontal className="h-4 w-4" /><span className="sr-only">Toggle menu</span></Button></DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>إجراءات</DropdownMenuLabel>
                           <DropdownMenuItem onClick={() => handleEdit(user)}>تعديل</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleToggleStatus(user)}>{user.status === 'نشط' ? 'تعطيل المستخدم' : 'تفعيل المستخدم'}</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleToggleStatus(user)}>{user.status === 'active' ? 'تعطيل المستخدم' : 'تفعيل المستخدم'}</DropdownMenuItem>
                           <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleDeleteClick(user)}><Trash2 className="ml-2 h-4 w-4" />حذف</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -203,7 +204,7 @@ function UsersPageContent() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
               <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>الاسم الكامل</FormLabel><FormControl><Input placeholder="مثال: عبدالله الصالح" {...field} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={form.control} name="email" render={({ field }) => (<FormItem><FormLabel>البريد الإلكتروني</FormLabel><FormControl><Input type="email" placeholder="user@example.com" {...field} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={form.control} name="role" render={({ field }) => (<FormItem><FormLabel>الدور</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="اختر دوراً للمستخدم" /></SelectTrigger></FormControl><SelectContent>{roles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
+              <FormField control={form.control} name="role" render={({ field }) => (<FormItem><FormLabel>الدور</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="اختر دوراً للمستخدم" /></SelectTrigger></FormControl><SelectContent>{roles.map(r => <SelectItem key={r} value={r}>{roleMap[r]}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
               {watchRole === ROLES.BRANCH_MANAGER && (
                 <FormField control={form.control} name="branchId" render={({ field }) => (<FormItem><FormLabel>الفرع</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="اختر فرعاً" /></SelectTrigger></FormControl><SelectContent>{branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
               )}

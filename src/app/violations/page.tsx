@@ -17,6 +17,7 @@ import { collection, getDocs, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/context/auth-context';
 import { getPermission, PERMISSIONS, ROLES } from '@/lib/permissions';
+import { violationStatusMap } from '@/lib/i18n';
 
 export default function ViolationsPage() {
   const { user } = useAuth();
@@ -126,7 +127,7 @@ export default function ViolationsPage() {
                   <TableHead>تاريخ الرصد</TableHead>
                   <TableHead>آخر موعد للاعتراض</TableHead>
                   <TableHead>القيمة</TableHead>
-                  <TableHead>الصور</TableHead>
+                  <TableHead>المرفقات</TableHead>
                   <TableHead>الحالة</TableHead>
                   {canWrite && <TableHead><span className="sr-only">Actions</span></TableHead>}
                 </TableRow>
@@ -159,15 +160,15 @@ export default function ViolationsPage() {
                     <TableCell>
                       <Badge
                         variant={
-                          violation.status === 'مدفوعة'
+                          violation.status === 'paid'
                             ? 'default'
-                            : violation.status === 'غير مدفوعة'
+                            : violation.status === 'unpaid'
                             ? 'destructive'
                             : 'secondary'
                         }
                         className="bg-opacity-20 text-opacity-100"
                       >
-                        {violation.status}
+                        {violationStatusMap[violation.status] || violation.status}
                       </Badge>
                     </TableCell>
                     {canWrite && (

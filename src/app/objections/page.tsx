@@ -30,6 +30,7 @@ import { getPermission, PERMISSIONS, ROLES } from '@/lib/permissions';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
+import { objectionStatusMap } from '@/lib/i18n';
 
 const objectionSchema = z.object({
   number: z.string().min(1, 'الرجاء إدخال رقم الاعتراض.'),
@@ -142,20 +143,15 @@ export default function ObjectionsPage() {
     const objectionId = newObjectionRef.id;
 
     try {
-        let attachmentData: Attachment[] = [];
-        if (attachments.length > 0) {
-            const storage = getStorage();
-            for (const file of attachments) {
-                const storageRef = ref(storage, `objections/${objectionId}/${Date.now()}-${file.name}`);
-                const snapshot = await uploadBytes(storageRef, file);
-                const downloadUrl = await getDownloadURL(snapshot.ref);
-                attachmentData.push({
-                    name: file.name,
-                    type: file.type,
-                    url: downloadUrl
-                });
-            }
-        }
+        const attachmentPromises = attachments.map(async (file) => {
+          const storage = getStorage();
+          const storageRef = ref(storage, `objections/${objectionId}/${Date.now()}-${file.name}`);
+          const snapshot = await uploadBytes(storageRef, file);
+          const downloadUrl = await getDownloadURL(snapshot.ref);
+          return { name: file.name, type: file.type, url: downloadUrl };
+        });
+
+        const attachmentData: Attachment[] = await Promise.all(attachmentPromises);
 
         const newObjectionData = {
             number: values.number,
@@ -163,7 +159,7 @@ export default function ObjectionsPage() {
             violationNumber: violation.violationNumber,
             branch: violation.branchName,
             date: format(values.date, 'yyyy-MM-dd'),
-            status: 'قيد المراجعة' as const,
+            status: 'pending' as const,
             details: values.details,
             attachments: attachmentData,
             createdAt: serverTimestamp(),
@@ -221,19 +217,19 @@ export default function ObjectionsPage() {
         const objectionRef = doc(db, 'objections', objectionId);
         batch.update(objectionRef, { status: status });
 
-        if (status === 'مقبول') {
+        if (status === 'approved') {
             const violationRef = doc(db, 'violations', objection.violationId);
-            batch.update(violationRef, { status: 'ملفية' });
+            batch.update(violationRef, { status: 'filed' });
         }
 
         await batch.commit();
 
         setObjections(objections.map(o => o.id === objectionId ? { ...o, status } : o));
         
-        if (status === 'مقبول') {
+        if (status === 'approved') {
             toast({ description: 'تم قبول الاعتراض وتحديث حالة المخالفة إلى "ملفية".' });
         } else {
-            toast({ description: `تم تغيير حالة الاعتراض إلى "${status}".`});
+            toast({ description: `تم تغيير حالة الاعتراض إلى "${objectionStatusMap[status]}".`});
         }
     } catch (error) {
         console.error("Error updating status: ", error);
@@ -310,14 +306,14 @@ export default function ObjectionsPage() {
                     <TableCell>
                       <Badge
                         variant={
-                          objection.status === 'مقبول'
+                          objection.status === 'approved'
                             ? 'default'
-                            : objection.status === 'مرفوض'
+                            : objection.status === 'rejected'
                             ? 'destructive'
                             : 'secondary'
                         }
                       >
-                        {objection.status}
+                        {objectionStatusMap[objection.status] || objection.status}
                       </Badge>
                     </TableCell>
                     {canWrite && (
@@ -331,9 +327,9 @@ export default function ObjectionsPage() {
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
                                     <DropdownMenuLabel>تغيير الحالة</DropdownMenuLabel>
-                                    <DropdownMenuItem onClick={() => handleStatusChange(objection.id, 'قيد المراجعة')}>قيد المراجعة</DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => handleStatusChange(objection.id, 'مقبول')}>مقبول</DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => handleStatusChange(objection.id, 'مرفوض')}>مرفوض</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleStatusChange(objection.id, 'pending')}>قيد المراجعة</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleStatusChange(objection.id, 'approved')}>مقبول</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleStatusChange(objection.id, 'rejected')}>مرفوض</DropdownMenuItem>
                                     <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleDeleteClick(objection)}>حذف</DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>

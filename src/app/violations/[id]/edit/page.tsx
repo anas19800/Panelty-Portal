@@ -97,6 +97,14 @@ function EditViolationPageContent({ violationId }: { violationId: string }) {
                 const category = categoriesData.find(c => c.mainCategory === violationData.category);
                 const subCategory = category?.subCategories.find(sc => sc.name === violationData.subCategory);
 
+                // This mapping helps migrate old data. When saved, it will be in the new format.
+                const statusMap: Record<string, Violation['status']> = {
+                    'مدفوعة': 'paid',
+                    'غير مدفوعة': 'unpaid',
+                    'ملفية': 'filed'
+                };
+                const mappedStatus = statusMap[violationData.status] || violationData.status;
+
                 form.reset({
                     region: violationData.region,
                     brand: violationData.brand,
@@ -108,7 +116,7 @@ function EditViolationPageContent({ violationId }: { violationId: string }) {
                     fineAmount: violationData.amount,
                     category: category?.mainCategoryCode || '',
                     subCategory: subCategory?.code || '',
-                    status: violationData.status === 'مدفوعة' ? 'paid' : violationData.status === 'غير مدفوعة' ? 'unpaid' : 'filed',
+                    status: mappedStatus as Violation['status'],
                 });
                 
                 const branch = branchesData.find(b => b.id === violationData.branchId);
@@ -202,7 +210,7 @@ function EditViolationPageContent({ violationId }: { violationId: string }) {
             category: category?.mainCategory || 'غير محدد',
             subCategory: subCategory?.name || 'غير محدد',
             amount: data.fineAmount,
-            status: data.status === 'paid' ? 'مدفوعة' : data.status === 'unpaid' ? 'غير مدفوعة' : 'ملفية',
+            status: data.status,
             branchId: branch.id,
             branchName: branch.name,
             brand: branch.brand,
@@ -345,10 +353,10 @@ function EditViolationPageContent({ violationId }: { violationId: string }) {
   );
 }
 
-export default function EditViolationPage({ params: { id } }: { params: { id: string } }) {
+export default function EditViolationPage({ params }: { params: { id: string } }) {
     return (
         <PageGuard feature={PERMISSIONS.VIOLATIONS} requiredPermission="write">
-            <EditViolationPageContent violationId={id} />
+            <EditViolationPageContent violationId={params.id} />
         </PageGuard>
     )
 }

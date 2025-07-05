@@ -168,7 +168,7 @@ function NewViolationPageContent() {
             category: category?.mainCategory || 'غير محدد',
             subCategory: subCategory?.name || 'غير محدد',
             amount: data.fineAmount,
-            status: data.status === 'paid' ? 'مدفوعة' : data.status === 'unpaid' ? 'غير مدفوعة' : 'ملفية',
+            status: data.status,
             branchId: branch.id,
             branchName: branch.name,
             brand: branch.brand,

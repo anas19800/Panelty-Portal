@@ -1,11 +1,11 @@
 import type { User } from './mock-data';
 
 export const ROLES = {
-    BRANCH_MANAGER: 'مدير فرع',
-    REGIONAL_MANAGER: 'مدير إقليمي',
-    QUALITY_OFFICER: 'مسؤول جودة',
-    SENIOR_MANAGEMENT: 'إدارة عليا',
-    SYSTEM_ADMIN: 'مسؤول نظام',
+    BRANCH_MANAGER: 'branch_manager',
+    REGIONAL_MANAGER: 'regional_manager',
+    QUALITY_OFFICER: 'quality_officer',
+    SENIOR_MANAGEMENT: 'senior_management',
+    SYSTEM_ADMIN: 'system_admin',
 } as const;
 
 export const PERMISSIONS = {
@@ -21,7 +21,7 @@ type Role = User['role'];
 export type Permission = 'none' | 'read_own' | 'read_all' | 'write';
 export type Feature = typeof PERMISSIONS[keyof typeof PERMISSIONS];
 
-const rolePermissions: Record<Role, Record<Feature, Permission>> = {
+const rolePermissions: Record<string, Record<Feature, Permission>> = {
     [ROLES.BRANCH_MANAGER]: {
         [PERMISSIONS.DASHBOARD]: 'read_own',
         [PERMISSIONS.VIOLATIONS]: 'read_own',
@@ -66,5 +66,6 @@ const rolePermissions: Record<Role, Record<Feature, Permission>> = {
 
 export function getPermission(role: Role | undefined, feature: Feature): Permission {
     if (!role) return 'none';
+    // @ts-ignore
     return rolePermissions[role]?.[feature] ?? 'none';
 }

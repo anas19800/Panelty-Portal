@@ -7,7 +7,7 @@ export type Violation = {
   category: string;
   subCategory: string;
   amount: number;
-  status: 'مدفوعة' | 'غير مدفوعة' | 'ملفية';
+  status: 'paid' | 'unpaid' | 'filed';
   branchId: string;
   branchName: string;
   brand: string;
@@ -51,7 +51,7 @@ export type Objection = {
   violationNumber: string;
   branch: string;
   date: string;
-  status: 'مقبول' | 'قيد المراجعة' | 'مرفوض';
+  status: 'approved' | 'pending' | 'rejected';
   details: string;
   attachments: Attachment[];
   branchId: string;
@@ -62,8 +62,8 @@ export type User = {
   id: string;
   name: string;
   email: string;
-  role: 'مدير فرع' | 'مدير إقليمي' | 'مسؤول جودة' | 'إدارة عليا' | 'مسؤول نظام';
-  status: 'نشط' | 'غير نشط';
+  role: string;
+  status: 'active' | 'inactive';
   branchId?: string; // Required for 'مدير فرع'
   branchName?: string;
   region?: string;   // Required for 'مدير إقليمي'
@@ -81,25 +81,25 @@ export const branches: Branch[] = [
 ];
 
 export const violations: Violation[] = [
-  { id: 'v1', violationNumber: 'V-001', paymentNumber: 'P-001', date: '2024-05-01', category: 'متطلبات الموقع والمبنى', subCategory: 'عدم ملاءمة الموقع', amount: 500, status: 'مدفوعة', branchId: 'b1', branchName: 'فرع العليا', brand: 'براند ألف', region: 'المنطقة الوسطى', city: 'الرياض' },
-  { id: 'v2', violationNumber: 'V-002', paymentNumber: 'P-002', date: '2024-05-05', category: 'العاملون', subCategory: 'تدني مستوى النظافة الشخصية', amount: 1000, status: 'غير مدفوعة', branchId: 'b2', branchName: 'فرع التحلية', brand: 'براند ألف', region: 'المنطقة الغربية', city: 'جدة' },
-  { id: 'v3', violationNumber: 'V-003', paymentNumber: 'P-003', date: '2024-05-10', category: 'المواد الغذائية', subCategory: 'تخزين غير سليم للمواد الغذائية', amount: 2500, status: 'ملفية', branchId: 'b3', branchName: 'فرع الخبر', brand: 'براند باء', region: 'المنطقة الشرقية', city: 'الخبر' },
-  { id: 'v4', violationNumber: 'V-004', paymentNumber: 'P-004', date: '2024-05-12', category: 'التجهيزات الداخلية', subCategory: 'عدم كفاءة التهوية', amount: 750, status: 'مدفوعة', branchId: 'b1', branchName: 'فرع العليا', brand: 'براند ألف', region: 'المنطقة الوسطى', city: 'الرياض' },
-  { id: 'v5', violationNumber: 'V-005', paymentNumber: 'P-005', date: '2024-05-15', category: 'العاملون', subCategory: 'عدم وجود شهادات صحية', amount: 1200, status: 'غير مدفوعة', branchId: 'b4', branchName: 'فرع الياسمين', brand: 'براند باء', region: 'المنطقة الوسطى', city: 'الرياض' },
+  { id: 'v1', violationNumber: 'V-001', paymentNumber: 'P-001', date: '2024-05-01', category: 'متطلبات الموقع والمبنى', subCategory: 'عدم ملاءمة الموقع', amount: 500, status: 'paid', branchId: 'b1', branchName: 'فرع العليا', brand: 'براند ألف', region: 'المنطقة الوسطى', city: 'الرياض' },
+  { id: 'v2', violationNumber: 'V-002', paymentNumber: 'P-002', date: '2024-05-05', category: 'العاملون', subCategory: 'تدني مستوى النظافة الشخصية', amount: 1000, status: 'unpaid', branchId: 'b2', branchName: 'فرع التحلية', brand: 'براند ألف', region: 'المنطقة الغربية', city: 'جدة' },
+  { id: 'v3', violationNumber: 'V-003', paymentNumber: 'P-003', date: '2024-05-10', category: 'المواد الغذائية', subCategory: 'تخزين غير سليم للمواد الغذائية', amount: 2500, status: 'filed', branchId: 'b3', branchName: 'فرع الخبر', brand: 'براند باء', region: 'المنطقة الشرقية', city: 'الخبر' },
+  { id: 'v4', violationNumber: 'V-004', paymentNumber: 'P-004', date: '2024-05-12', category: 'التجهيزات الداخلية', subCategory: 'عدم كفاءة التهوية', amount: 750, status: 'paid', branchId: 'b1', branchName: 'فرع العليا', brand: 'براند ألف', region: 'المنطقة الوسطى', city: 'الرياض' },
+  { id: 'v5', violationNumber: 'V-005', paymentNumber: 'P-005', date: '2024-05-15', category: 'العاملون', subCategory: 'عدم وجود شهادات صحية', amount: 1200, status: 'unpaid', branchId: 'b4', branchName: 'فرع الياسمين', brand: 'براند باء', region: 'المنطقة الوسطى', city: 'الرياض' },
 ];
 
 export const objections: Objection[] = [
-    { id: 'o1', number: 'OBJ-001', violationId: 'v3', violationNumber: 'V-003', branch: 'فرع الخبر', date: '2024-05-12', status: 'مقبول', details: 'الاعتراض الأول', attachments: [], branchId: 'b3', region: 'المنطقة الشرقية' },
-    { id: 'o2', number: 'OBJ-002', violationId: 'v5', violationNumber: 'V-005', branch: 'فرع الياسمين', date: '2024-05-18', status: 'قيد المراجعة', details: 'الاعتراض الثاني', attachments: [], branchId: 'b4', region: 'المنطقة الوسطى' },
-    { id: 'o3', number: 'OBJ-003', violationId: 'v2', violationNumber: 'V-002', branch: 'فرع التحلية', date: '2024-05-20', status: 'مرفوض', details: 'الاعتراض الثالث', attachments: [{name: 'photo.jpg', type: 'image/jpeg', url: '#'}], branchId: 'b2', region: 'المنطقة الغربية' },
+    { id: 'o1', number: 'OBJ-001', violationId: 'v3', violationNumber: 'V-003', branch: 'فرع الخبر', date: '2024-05-12', status: 'approved', details: 'الاعتراض الأول', attachments: [], branchId: 'b3', region: 'المنطقة الشرقية' },
+    { id: 'o2', number: 'OBJ-002', violationId: 'v5', violationNumber: 'V-005', branch: 'فرع الياسمين', date: '2024-05-18', status: 'pending', details: 'الاعتراض الثاني', attachments: [], branchId: 'b4', region: 'المنطقة الوسطى' },
+    { id: 'o3', number: 'OBJ-003', violationId: 'v2', violationNumber: 'V-002', branch: 'فرع التحلية', date: '2024-05-20', status: 'rejected', details: 'الاعتراض الثالث', attachments: [{name: 'photo.jpg', type: 'image/jpeg', url: '#'}], branchId: 'b2', region: 'المنطقة الغربية' },
 ];
 
 export const users: User[] = [
-    { id: 'u1', name: 'عبدالله الصالح', email: 'a.saleh@example.com', role: 'مسؤول جودة', status: 'نشط' },
-    { id: 'u2', name: 'فاطمة حمد', email: 'f.hamad@example.com', role: 'مدير إقليمي', status: 'نشط' },
-    { id: 'u3', name: 'سعد العتيبي', email: 's.otaibi@example.com', role: 'مدير فرع', status: 'غير نشط' },
-    { id: 'u4', name: 'علي الأحمد', email: 'a.ahmad@example.com', role: 'إدارة عليا', status: 'نشط' },
-    { id: 'u5', name: 'نورة السالم', email: 'n.salem@example.com', role: 'مسؤول نظام', status: 'نشط' },
+    { id: 'u1', name: 'عبدالله الصالح', email: 'a.saleh@example.com', role: 'quality_officer', status: 'active' },
+    { id: 'u2', name: 'فاطمة حمد', email: 'f.hamad@example.com', role: 'regional_manager', status: 'active' },
+    { id: 'u3', name: 'سعد العتيبي', email: 's.otaibi@example.com', role: 'branch_manager', status: 'inactive' },
+    { id: 'u4', name: 'علي الأحمد', email: 'a.ahmad@example.com', role: 'senior_management', status: 'active' },
+    { id: 'u5', name: 'نورة السالم', email: 'n.salem@example.com', role: 'system_admin', status: 'active' },
 ];
 
 export const recentViolations = violations.slice(0,5).map(v => ({
