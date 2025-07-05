@@ -1,0 +1,394 @@
+{
+  "app": {
+    "title": "متتبع امتثال الفروع",
+    "description": "منصة لمراقبة وتتبع مخالفات البلدية."
+  },
+  "nav": {
+    "dashboard": "لوحة المعلومات",
+    "violations": "المخالفات",
+    "objections": "الاعتراضات",
+    "branches": "الفروع",
+    "users": "المستخدمون",
+    "dataManagement": "إدارة البيانات",
+    "settings": "الإعدادات",
+    "support": "الدعم",
+    "logout": "تسجيل الخروج",
+    "actions": "إجراءات"
+  },
+  "common": {
+    "all": "الكل",
+    "save": "حفظ",
+    "saving": "جاري الحفظ...",
+    "cancel": "إلغاء",
+    "delete": "حذف",
+    "edit": "تعديل",
+    "confirm": "تأكيد",
+    "areYouSure": "هل أنت متأكد؟",
+    "noUndo": "لا يمكن التراجع عن هذا الإجراء.",
+    "loading": "جاري التحميل...",
+    "noAccess": "جاري التحميل أو ليس لديك الصلاحية...",
+    "search": "بحث...",
+    "name": "الاسم",
+    "email": "البريد الإلكتروني",
+    "role": "الدور",
+    "status": "الحالة",
+    "city": "المدينة",
+    "region": "المنطقة",
+    "brand": "البراند",
+    "branch": "الفرع",
+    "manager": "المدير",
+    "regionalManager": "المدير الإقليمي"
+  },
+  "dashboard": {
+    "title": "لوحة المعلومات",
+    "filters": "فلاتر",
+    "filtersDescription": "تصفية البيانات المعروضة في لوحة المعلومات.",
+    "violationStatus": "حالة المخالفة",
+    "year": "السنة",
+    "totalViolations": "إجمالي المخالفات",
+    "totalViolationsDesc": "مخالفة مسجلة في النظام",
+    "totalFines": "إجمالي الغرامات",
+    "totalFinesDesc": "قيمة جميع المخالفات المسجلة",
+    "objections": "الاعتراضات",
+    "pendingReview": "قيد المراجعة",
+    "mostFrequent": "الأكثر تكراراً",
+    "mostFrequentDesc": "الفئة الفرعية الأكثر تسجيلاً",
+    "violationsByBrand": "المخالفات حسب البراند",
+    "violationsByBrandDesc": "عرض لعدد المخالفات المسجلة لكل براند.",
+    "violationsByStatus": "حالة المخالفات",
+    "violationsByStatusDesc": "توزيع المخالفات حسب حالتها.",
+    "recentViolations": "أحدث المخالفات",
+    "recentViolationsDesc": "قائمة بآخر 5 مخالفات تم تسجيلها في النظام.",
+    "table": {
+      "branch": "الفرع",
+      "city": "المدينة",
+      "detectionDate": "تاريخ الرصد",
+      "amount": "القيمة",
+      "status": "الحالة"
+    }
+  },
+  "branches": {
+    "title": "إدارة الفروع",
+    "import": "استيراد من Excel",
+    "addNew": "إضافة فرع جديد",
+    "listTitle": "قائمة الفروع",
+    "listDescription": "عرض وتعديل بيانات الفروع المسجلة. لاستيراد ملف Excel، يجب أن يحتوي على الأعمدة: \"اسم الفرع\", \"المدينة\", \"المنطقة\", \"البراند\", \"مدير الفرع\", \"المدير الإقليمي\", \"رابط الموقع\".",
+    "table": {
+      "name": "اسم الفرع",
+      "city": "المدينة",
+      "region": "المنطقة",
+      "brand": "البراند",
+      "manager": "مدير الفرع"
+    },
+    "dialog": {
+      "editTitle": "تعديل بيانات الفرع",
+      "addTitle": "إضافة فرع جديد",
+      "editDescription": "قم بتحديث معلومات الفرع هنا.",
+      "addDescription": "أدخل معلومات الفرع الجديد هنا.",
+      "name": "اسم الفرع",
+      "namePlaceholder": "مثال: فرع العليا",
+      "city": "المدينة",
+      "cityPlaceholder": "مثال: الرياض",
+      "region": "المنطقة",
+      "selectRegion": "اختر منطقة",
+      "brand": "البراند",
+      "selectBrand": "اختر براند",
+      "manager": "مدير الفرع",
+      "managerPlaceholder": "اسم مدير الفرع",
+      "regionalManager": "المدير الإقليمي",
+      "regionalManagerPlaceholder": "اسم المدير الإقليمي",
+      "location": "رابط الموقع (اختياري)",
+      "locationPlaceholder": "https://maps.google.com/..."
+    },
+    "deleteDialog": {
+      "description": "سيتم حذف بيانات الفرع \"{branchName}\" نهائياً. لا يمكن التراجع عن هذا الإجراء."
+    },
+    "toasts": {
+      "loadError": "فشل في تحميل البيانات من قاعدة البيانات.",
+      "deleteSuccess": "تم حذف الفرع بنجاح.",
+      "deleteError": "فشل في حذف الفرع.",
+      "saveError": "فشل في حفظ الفرع.",
+      "updateSuccess": "تم تعديل الفرع بنجاح.",
+      "addSuccess": "تمت إضافة الفرع بنجاح.",
+      "importSuccess": "تم استيراد {count} فرع بنجاح.",
+      "importNoData": "لم يتم العثور على بيانات صالحة في الملف. يرجى التحقق من أسماء الأعمدة.",
+      "importProcessError": "حدث خطأ أثناء معالجة الملف.",
+      "importReadError": "فشل في قراءة الملف."
+    }
+  },
+  "violations": {
+    "title": "سجل المخالفات",
+    "addNew": "تسجيل مخالفة جديدة",
+    "listTitle": "جميع المخالفات",
+    "listDescription": "قائمة بجميع مخالفات البلدية المسجلة على الفروع.",
+    "table": {
+      "number": "رقم المخالفة",
+      "branch": "الفرع",
+      "detectionDate": "تاريخ الرصد",
+      "objectionDeadline": "آخر موعد للاعتراض",
+      "amount": "القيمة",
+      "attachments": "المرفقات",
+      "status": "الحالة"
+    },
+    "deleteDialog": {
+      "description": "سيتم حذف المخالفة رقم \"{violationNumber}\" نهائياً. لا يمكن التراجع عن هذا الإجراء."
+    },
+    "form": {
+      "editTitle": "تعديل مخالفة",
+      "newTitle": "تسجيل مخالفة جديدة",
+      "step1Title": "1. اختيار الفرع",
+      "step1Desc": "الرجاء اختيار المنطقة ثم البراند والفرع لتسجيل المخالفة.",
+      "region": "المنطقة التشغيلية",
+      "selectRegion": "اختر منطقة",
+      "brand": "البراند",
+      "selectBrand": "اختر براند",
+      "branch": "الفرع",
+      "selectBranch": "اختر فرع",
+      "step2Title": "2. تفاصيل المخالفة",
+      "step2Desc": "أدخل معلومات المخالفة وتفاصيلها الدقيقة.",
+      "violationNumber": "رقم المخالفة",
+      "violationNumberPlaceholder": "مثال: 123456789",
+      "paymentNumber": "رقم السداد (اختياري)",
+      "paymentNumberPlaceholder": "مثال: SADAD-98765",
+      "detectionDate": "تاريخ الرصد",
+      "selectDate": "اختر تاريخ",
+      "objectionDeadline": "آخر موعد للاعتراض",
+      "fineAmount": "قيمة المخالفة",
+      "fineAmountPlaceholder": "0.00",
+      "category": "الفئة العامة",
+      "selectCategory": "اختر فئة",
+      "subCategory": "الفئة الفرعية",
+      "selectSubCategory": "اختر فئة فرعية",
+      "attachments": "المرفقات",
+      "noAttachments": "لا توجد مرفقات حالياً.",
+      "addAttachments": "إضافة مرفقات جديدة",
+      "dropzoneHint": "انقر للرفع أو اسحب وأفلت",
+      "dropzoneMeta": "الحد الأقصى 10 ميجابايت لكل ملف",
+      "newFiles": "الملفات الجديدة المضافة:",
+      "status": "حالة المخالفة"
+    },
+    "branchInfo": {
+      "title": "معلومات الفرع",
+      "city": "المدينة:",
+      "brand": "البراند:",
+      "manager": "مدير الفرع:",
+      "regionalManager": "المدير الإقليمي:",
+      "viewLocation": "عرض الموقع",
+      "selectBranch": "الرجاء اختيار فرع لعرض معلوماته."
+    },
+    "toasts": {
+        "loadError": "فشل في تحميل المخالفات.",
+        "deleteSuccess": "تم حذف المخالفة بنجاح.",
+        "deleteError": "فشل في حذف المخالفة.",
+        "updateSuccess": "تم تحديث المخالفة بنجاح.",
+        "updateError": "حدث خطأ أثناء تحديث المخالفة.",
+        "notFound": "لم يتم العثور على المخالفة.",
+        "dataLoadError": "فشل تحميل البيانات.",
+        "fileSizeErrorTitle": "ملفات كبيرة الحجم",
+        "fileSizeErrorDesc": "تم تجاهل {count} ملف لأن حجمها يتجاوز 10 ميجابايت.",
+        "saveSuccess": "تم حفظ المخالفة بنجاح.",
+        "saveError": "حدث خطأ أثناء حفظ المخالفة."
+    }
+  },
+  "objections": {
+    "title": "متابعة الاعتراضات",
+    "addNew": "تسجيل اعتراض جديد",
+    "listTitle": "قائمة الاعتراضات",
+    "listDescription": "عرض وتتبع جميع الاعتراضات المقدمة على المخالفات.",
+    "table": {
+        "number": "رقم الاعتراض",
+        "violationNumber": "رقم المخالفة",
+        "branch": "الفرع",
+        "date": "تاريخ الاعتراض",
+        "attachments": "المرفقات",
+        "status": "الحالة"
+    },
+    "dialog": {
+        "title": "تسجيل اعتراض جديد",
+        "description": "أدخل بيانات الاعتراض والمخالفة المرتبطة به.",
+        "number": "رقم الاعتراض",
+        "numberPlaceholder": "أدخل رقم الاعتراض",
+        "date": "تاريخ الاعتراض",
+        "selectDate": "اختر تاريخ",
+        "violation": "المخالفة",
+        "selectViolation": "اختر رقم المخالفة...",
+        "details": "تفاصيل الاعتراض",
+        "detailsPlaceholder": "اشرح أسباب اعتراضك هنا...",
+        "attachments": "المرفقات (اختياري)",
+        "dropzoneHint": "انقر للرفع أو اسحب وأفلت",
+        "dropzoneMeta": "الحد الأقصى 10 ميجابايت لكل ملف",
+        "selectedFiles": "الملفات المختارة:"
+    },
+    "deleteDialog": {
+        "description": "سيتم حذف الاعتراض رقم \"{objectionNumber}\" نهائياً. لا يمكن التراجع عن هذا الإجراء."
+    },
+    "statusMenu": {
+        "changeStatus": "تغيير الحالة",
+        "pending": "قيد المراجعة",
+        "approved": "مقبول",
+        "rejected": "مرفوض"
+    },
+    "toasts": {
+        "loadError": "فشل تحميل البيانات من قاعدة البيانات.",
+        "violationNotFound": "المخالفة المحددة غير موجودة.",
+        "saveSuccess": "تم تسجيل الاعتراض بنجاح.",
+        "saveError": "فشل في حفظ الاعتراض.",
+        "fileSizeErrorTitle": "ملفات كبيرة الحجم",
+        "fileSizeErrorDesc": "تم تجاهل {count} ملف لأن حجمها يتجاوز 10 ميجابايت.",
+        "deleteSuccess": "تم حذف الاعتراض بنجاح.",
+        "deleteError": "فشل في حذف الاعتراض.",
+        "statusUpdateError": "فشل في تحديث الحالة.",
+        "statusApproved": "تم قبول الاعتراض وتحديث حالة المخالفة إلى 'ملفية'.",
+        "statusChanged": "تم تغيير حالة الاعتراض إلى \"{status}\"."
+    }
+  },
+  "users": {
+    "title": "إدارة المستخدمين والصلاحيات",
+    "addNew": "إضافة مستخدم",
+    "listTitle": "قائمة المستخدمين",
+    "listDescription": "إدارة حسابات المستخدمين والتحكم في صلاحياتهم.",
+    "table": {
+      "name": "الاسم",
+      "email": "البريد الإلكتروني",
+      "role": "الدور",
+      "status": "الحالة"
+    },
+    "dialog": {
+      "editTitle": "تعديل بيانات المستخدم",
+      "addTitle": "إضافة مستخدم جديد",
+      "description": "أدخل تفاصيل المستخدم والصلاحيات الممنوحة له.",
+      "name": "الاسم الكامل",
+      "namePlaceholder": "مثال: عبدالله الصالح",
+      "email": "البريد الإلكتروني",
+      "emailPlaceholder": "user@example.com",
+      "role": "الدور",
+      "selectRole": "اختر دوراً للمستخدم",
+      "branch": "الفرع",
+      "selectBranch": "اختر فرعاً",
+      "region": "المنطقة",
+      "selectRegion": "اختر منطقة"
+    },
+    "actions": {
+        "toggleActive": "تفعيل المستخدم",
+        "toggleInactive": "تعطيل المستخدم"
+    },
+    "deleteDialog": {
+      "description": "سيتم حذف المستخدم \"{userName}\" نهائياً. لا يمكن التراجع عن هذا الإجراء."
+    },
+    "toasts": {
+      "loadError": "فشل في تحميل البيانات.",
+      "deleteSuccess": "تم حذف المستخدم بنجاح.",
+      "deleteError": "فشل في حذف المستخدم.",
+      "statusToggleSuccess": "تم تغيير حالة المستخدم {userName}.",
+      "statusToggleError": "فشل في تغيير حالة المستخدم.",
+      "saveError": "فشل في حفظ بيانات المستخدم.",
+      "updateSuccess": "تم تعديل بيانات المستخدم بنجاح.",
+      "addSuccess": "تمت إضافة المستخدم بنجاح. يجب إنشاء بيانات دخوله بشكل منفصل."
+    }
+  },
+  "management": {
+    "title": "إدارة بيانات النظام",
+    "tabs": {
+        "brands": "البراندات",
+        "regions": "المناطق",
+        "categories": "فئات المخالفات"
+    },
+    "brands": {
+        "title": "إدارة البراندات",
+        "description": "إضافة أو حذف البراندات التجارية في النظام.",
+        "placeholder": "اسم البراند الجديد",
+        "add": "إضافة",
+        "tableHeader": "اسم البراند"
+    },
+    "regions": {
+        "title": "إدارة المناطق",
+        "description": "إضافة أو حذف المناطق التشغيلية في النظام.",
+        "placeholder": "اسم المنطقة الجديدة",
+        "add": "إضافة",
+        "tableHeader": "اسم المنطقة"
+    },
+    "categories": {
+        "title": "إدارة فئات المخالفات",
+        "description": "إدارة الفئات الرئيسية والفرعية للمخالفات وأرقامها.",
+        "mainCatCodePlaceholder": "رقم الفئة",
+        "mainCatNamePlaceholder": "اسم الفئة الرئيسية الجديدة",
+        "addMainCat": "إضافة فئة رئيسية",
+        "subCatCodePlaceholder": "الرقم",
+        "subCatNamePlaceholder": "اسم الفئة الفرعية...",
+        "addSubCat": "إضافة",
+        "noSubCats": "لا توجد فئات فرعية."
+    },
+    "toasts": {
+        "loadError": "فشل في تحميل البيانات من قاعدة البيانات.",
+        "addEmptyError": "لا يمكن إضافة قيمة فارغة.",
+        "addDuplicateError": "هذه القيمة موجودة بالفعل.",
+        "saveError": "فشل في الحفظ.",
+        "addSuccess": "تمت الإضافة بنجاح.",
+        "deleteSuccess": "تم الحذف بنجاح.",
+        "deleteError": "فشل في الحذف.",
+        "mainCatCodeRequired": "الرجاء إدخال الرقم والاسم للفئة الرئيسية.",
+        "mainCatCodeExists": "رقم الفئة الرئيسية موجود بالفعل.",
+        "mainCatAddSuccess": "تمت إضافة الفئة الرئيسية بنجاح.",
+        "mainCatSaveError": "فشل في حفظ الفئة الرئيسية.",
+        "mainCatDeleteSuccess": "تم حذف الفئة الرئيسية.",
+        "mainCatDeleteError": "فشل في حذف الفئة الرئيسية.",
+        "subCatCodeRequired": "الرجاء إدخال الرقم والاسم للفئة الفرعية.",
+        "subCatCodeExists": "رقم الفئة الفرعية موجود بالفعل.",
+        "subCatAddSuccess": "تمت إضافة الفئة الفرعية بنجاح.",
+        "subCatSaveError": "فشل في حفظ الفئة الفرعية.",
+        "subCatDeleteSuccess": "تم حذف الفئة الفرعية.",
+        "subCatDeleteError": "فشل في حذف الفئة الفرعية."
+    }
+  },
+  "auth": {
+    "loginTitle": "تسجيل الدخول",
+    "loginDescription": "أدخل بريدك الإلكتروني وكلمة المرور للوصول إلى حسابك.",
+    "emailLabel": "البريد الإلكتروني",
+    "emailPlaceholder": "m@example.com",
+    "passwordLabel": "كلمة المرور",
+    "submitLogin": "تسجيل الدخول",
+    "submittingLogin": "جاري تسجيل الدخول...",
+    "noAccount": "ليس لديك حساب؟",
+    "signUp": "إنشاء حساب",
+    "registerTitle": "إنشاء حساب جديد",
+    "registerDescription": "أدخل بياناتك لإنشاء حساب جديد في النظام.",
+    "nameLabel": "الاسم الكامل",
+    "namePlaceholder": "عبدالله الصالح",
+    "submitRegister": "إنشاء حساب",
+    "submittingRegister": "جاري الإنشاء...",
+    "hasAccount": "لديك حساب بالفعل؟",
+    "loginHere": "تسجيل الدخول",
+    "verifying": "جاري التحقق من الهوية",
+    "pleaseWait": "الرجاء الانتظار...",
+    "toasts": {
+        "loginMissingFields": "الرجاء إدخال البريد الإلكتروني وكلمة المرور.",
+        "loginFailed": "فشل تسجيل الدخول",
+        "loginErrorDesc": "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
+        "registerSuccess": "نجاح",
+        "registerSuccessDesc": "تم إنشاء حسابك بنجاح. جاري تسجيل الدخول...",
+        "registerFailed": "فشل إنشاء الحساب. الرجاء المحاولة مرة أخرى.",
+        "emailInUse": "هذا البريد الإلكتروني مسجل بالفعل."
+    }
+  },
+  "roles": {
+    "branch_manager": "مدير فرع",
+    "regional_manager": "مدير إقليمي",
+    "quality_officer": "مسؤول جودة",
+    "senior_management": "إدارة عليا",
+    "system_admin": "مسؤول نظام"
+  },
+  "violationStatuses": {
+    "paid": "مدفوعة",
+    "unpaid": "غير مدفوعة",
+    "filed": "ملفية"
+  },
+  "objectionStatuses": {
+    "approved": "مقبول",
+    "pending": "قيد المراجعة",
+    "rejected": "مرفوض"
+  },
+  "userStatuses": {
+    "active": "نشط",
+    "inactive": "غير نشط"
+  }
+}

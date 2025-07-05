@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Card,
   CardContent,
@@ -35,10 +36,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { violationStatusMap } from '@/lib/i18n';
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [violations, setViolations] = useState<Violation[]>([]);
   const [objections, setObjections] = useState<Objection[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -116,13 +117,13 @@ export default function Dashboard() {
 
       } catch (error) {
         console.error('Failed to fetch dashboard data from Firestore', error);
-        toast({ variant: 'destructive', description: 'فشل في تحميل بيانات لوحة المعلومات.' });
+        toast({ variant: 'destructive', description: t('branches.toasts.loadError') });
       } finally {
         setIsLoaded(true);
       }
     }
     fetchData();
-  }, [user, toast]);
+  }, [user, toast, t]);
 
   const filteredData = useMemo(() => {
     const filteredViolations = violations.filter(
@@ -177,7 +178,7 @@ export default function Dashboard() {
         ? Object.keys(categoryCounts).reduce((a, b) =>
             categoryCounts[a] > categoryCounts[b] ? a : b
           )
-        : 'لا يوجد';
+        : t('common.none');
 
     return {
       totalViolations,
@@ -186,7 +187,7 @@ export default function Dashboard() {
       allObjectionsCount,
       mostFrequentViolation,
     };
-  }, [filteredData]);
+  }, [filteredData, t]);
 
   const recentViolations = useMemo(() => {
     return [...filteredData.filteredViolations]
@@ -197,7 +198,7 @@ export default function Dashboard() {
   if (!isLoaded) {
     return (
       <div className="flex flex-col gap-6">
-        <PageHeader title="لوحة المعلومات" />
+        <PageHeader title={t('dashboard.title')} />
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {[...Array(4)].map((_, i) => (
             <Card key={i}>
@@ -244,73 +245,73 @@ export default function Dashboard() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="لوحة المعلومات" />
+      <PageHeader title={t('dashboard.title')} />
       <Card>
         <CardHeader>
-          <CardTitle>فلاتر</CardTitle>
-          <CardDescription>تصفية البيانات المعروضة في لوحة المعلومات.</CardDescription>
+          <CardTitle>{t('dashboard.filters')}</CardTitle>
+          <CardDescription>{t('dashboard.filtersDescription')}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
             <div className="grid gap-2">
-              <Label htmlFor="region-filter">المنطقة</Label>
+              <Label htmlFor="region-filter">{t('common.region')}</Label>
               <Select value={selectedRegion} onValueChange={setSelectedRegion}>
-                <SelectTrigger id="region-filter"><SelectValue placeholder="الكل" /></SelectTrigger>
+                <SelectTrigger id="region-filter"><SelectValue placeholder={t('common.all')} /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">الكل</SelectItem>
+                  <SelectItem value="all">{t('common.all')}</SelectItem>
                   {regions.map((r) => (<SelectItem key={r.id} value={r.name}>{r.name}</SelectItem>))}
                 </SelectContent>
               </Select>
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="brand-filter">البراند</Label>
+              <Label htmlFor="brand-filter">{t('common.brand')}</Label>
               <Select value={selectedBrand} onValueChange={setSelectedBrand}>
-                <SelectTrigger id="brand-filter"><SelectValue placeholder="الكل" /></SelectTrigger>
+                <SelectTrigger id="brand-filter"><SelectValue placeholder={t('common.all')} /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">الكل</SelectItem>
+                  <SelectItem value="all">{t('common.all')}</SelectItem>
                   {brands.map((b) => (<SelectItem key={b.id} value={b.name}>{b.name}</SelectItem>))}
                 </SelectContent>
               </Select>
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="city-filter">المدينة</Label>
+              <Label htmlFor="city-filter">{t('common.city')}</Label>
               <Select value={selectedCity} onValueChange={setSelectedCity}>
-                <SelectTrigger id="city-filter"><SelectValue placeholder="الكل" /></SelectTrigger>
+                <SelectTrigger id="city-filter"><SelectValue placeholder={t('common.all')} /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">الكل</SelectItem>
+                  <SelectItem value="all">{t('common.all')}</SelectItem>
                   {cities.map((c) => (<SelectItem key={c} value={c}>{c}</SelectItem>))}
                 </SelectContent>
               </Select>
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="branch-filter">الفرع</Label>
+              <Label htmlFor="branch-filter">{t('common.branch')}</Label>
               <Select value={selectedBranch} onValueChange={setSelectedBranch}>
-                <SelectTrigger id="branch-filter"><SelectValue placeholder="الكل" /></SelectTrigger>
+                <SelectTrigger id="branch-filter"><SelectValue placeholder={t('common.all')} /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">الكل</SelectItem>
+                  <SelectItem value="all">{t('common.all')}</SelectItem>
                   {allBranches.map((b) => (<SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>))}
                 </SelectContent>
               </Select>
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="year-filter">السنة</Label>
+              <Label htmlFor="year-filter">{t('dashboard.year')}</Label>
               <Select value={selectedYear} onValueChange={setSelectedYear}>
-                <SelectTrigger id="year-filter"><SelectValue placeholder="الكل" /></SelectTrigger>
+                <SelectTrigger id="year-filter"><SelectValue placeholder={t('common.all')} /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">الكل</SelectItem>
+                  <SelectItem value="all">{t('common.all')}</SelectItem>
                   {years.map((y) => (<SelectItem key={y} value={y}>{y}</SelectItem>))}
                 </SelectContent>
               </Select>
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="status-filter">حالة المخالفة</Label>
+              <Label htmlFor="status-filter">{t('dashboard.violationStatus')}</Label>
               <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                <SelectTrigger id="status-filter"><SelectValue placeholder="الكل" /></SelectTrigger>
+                <SelectTrigger id="status-filter"><SelectValue placeholder={t('common.all')} /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">الكل</SelectItem>
-                  <SelectItem value="paid">مدفوعة</SelectItem>
-                  <SelectItem value="unpaid">غير مدفوعة</SelectItem>
-                  <SelectItem value="filed">ملفية</SelectItem>
+                  <SelectItem value="all">{t('common.all')}</SelectItem>
+                  <SelectItem value="paid">{t('violationStatuses.paid')}</SelectItem>
+                  <SelectItem value="unpaid">{t('violationStatuses.unpaid')}</SelectItem>
+                  <SelectItem value="filed">{t('violationStatuses.filed')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -320,62 +321,62 @@ export default function Dashboard() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">إجمالي المخالفات</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('dashboard.totalViolations')}</CardTitle>
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{dashboardStats.totalViolations}</div>
-            <p className="text-xs text-muted-foreground">مخالفة مسجلة في النظام</p>
+            <p className="text-xs text-muted-foreground">{t('dashboard.totalViolationsDesc')}</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">إجمالي الغرامات</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('dashboard.totalFines')}</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {dashboardStats.totalFines.toLocaleString('ar-SA')} <span className="text-sm">ريال</span>
+              {dashboardStats.totalFines.toLocaleString(t('app.locale'))} <span className="text-sm">{t('app.currency')}</span>
             </div>
-            <p className="text-xs text-muted-foreground">قيمة جميع المخالفات المسجلة</p>
+            <p className="text-xs text-muted-foreground">{t('dashboard.totalFinesDesc')}</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">الاعتراضات</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('dashboard.objections')}</CardTitle>
             <Gavel className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">+{dashboardStats.allObjectionsCount}</div>
-            <p className="text-xs text-muted-foreground">{dashboardStats.openObjections} قيد المراجعة</p>
+            <p className="text-xs text-muted-foreground">{dashboardStats.openObjections} {t('dashboard.pendingReview')}</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">الأكثر تكراراً</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('dashboard.mostFrequent')}</CardTitle>
             <LineChart className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-xl font-bold">{dashboardStats.mostFrequentViolation}</div>
-            <p className="text-xs text-muted-foreground">الفئة الفرعية الأكثر تسجيلاً</p>
+            <p className="text-xs text-muted-foreground">{t('dashboard.mostFrequentDesc')}</p>
           </CardContent>
         </Card>
       </div>
       <DashboardCharts violations={filteredData.filteredViolations} />
       <Card>
         <CardHeader>
-          <CardTitle>أحدث المخالفات</CardTitle>
-          <CardDescription>قائمة بآخر 5 مخالفات تم تسجيلها في النظام.</CardDescription>
+          <CardTitle>{t('dashboard.recentViolations')}</CardTitle>
+          <CardDescription>{t('dashboard.recentViolationsDesc')}</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>الفرع</TableHead>
-                <TableHead>المدينة</TableHead>
-                <TableHead>تاريخ الرصد</TableHead>
-                <TableHead>القيمة</TableHead>
-                <TableHead>الحالة</TableHead>
+                <TableHead>{t('dashboard.table.branch')}</TableHead>
+                <TableHead>{t('dashboard.table.city')}</TableHead>
+                <TableHead>{t('dashboard.table.detectionDate')}</TableHead>
+                <TableHead>{t('dashboard.table.amount')}</TableHead>
+                <TableHead>{t('dashboard.table.status')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -385,7 +386,7 @@ export default function Dashboard() {
                   <TableCell>{violation.city}</TableCell>
                   <TableCell>{violation.date}</TableCell>
                   <TableCell>
-                    {violation.amount.toLocaleString('ar-SA', {
+                    {violation.amount.toLocaleString(t('app.locale'), {
                       style: 'currency',
                       currency: 'SAR',
                     })}
@@ -401,7 +402,7 @@ export default function Dashboard() {
                       }
                       className="bg-opacity-20 text-opacity-100"
                     >
-                      {violationStatusMap[violation.status as keyof typeof violationStatusMap] || violation.status}
+                      {t(`violationStatuses.${violation.status}`)}
                     </Badge>
                   </TableCell>
                 </TableRow>

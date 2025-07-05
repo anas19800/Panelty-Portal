@@ -1,0 +1,394 @@
+{
+  "app": {
+    "title": "Branch Compliance Tracker",
+    "description": "Platform for monitoring and tracking municipal violations."
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "violations": "Violations",
+    "objections": "Objections",
+    "branches": "Branches",
+    "users": "Users",
+    "dataManagement": "Data Management",
+    "settings": "Settings",
+    "support": "Support",
+    "logout": "Logout",
+    "actions": "Actions"
+  },
+  "common": {
+    "all": "All",
+    "save": "Save",
+    "saving": "Saving...",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "confirm": "Confirm",
+    "areYouSure": "Are you sure?",
+    "noUndo": "This action cannot be undone.",
+    "loading": "Loading...",
+    "noAccess": "Loading or no permission...",
+    "search": "Search...",
+    "name": "Name",
+    "email": "Email",
+    "role": "Role",
+    "status": "Status",
+    "city": "City",
+    "region": "Region",
+    "brand": "Brand",
+    "branch": "Branch",
+    "manager": "Manager",
+    "regionalManager": "Regional Manager"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "filters": "Filters",
+    "filtersDescription": "Filter the data displayed on the dashboard.",
+    "violationStatus": "Violation Status",
+    "year": "Year",
+    "totalViolations": "Total Violations",
+    "totalViolationsDesc": "Registered violations in the system",
+    "totalFines": "Total Fines",
+    "totalFinesDesc": "Value of all registered violations",
+    "objections": "Objections",
+    "pendingReview": "pending review",
+    "mostFrequent": "Most Frequent",
+    "mostFrequentDesc": "Most registered sub-category",
+    "violationsByBrand": "Violations by Brand",
+    "violationsByBrandDesc": "Display of the number of violations registered for each brand.",
+    "violationsByStatus": "Violations Status",
+    "violationsByStatusDesc": "Distribution of violations by their status.",
+    "recentViolations": "Recent Violations",
+    "recentViolationsDesc": "List of the last 5 violations registered.",
+    "table": {
+      "branch": "Branch",
+      "city": "City",
+      "detectionDate": "Detection Date",
+      "amount": "Amount",
+      "status": "Status"
+    }
+  },
+  "branches": {
+    "title": "Manage Branches",
+    "import": "Import from Excel",
+    "addNew": "Add New Branch",
+    "listTitle": "Branches List",
+    "listDescription": "View and edit registered branch data. To import an Excel file, it must contain the columns: \"اسم الفرع\", \"المدينة\", \"المنطقة\", \"البراند\", \"مدير الفرع\", \"المدير الإقليمي\", \"رابط الموقع\".",
+    "table": {
+      "name": "Branch Name",
+      "city": "City",
+      "region": "Region",
+      "brand": "Brand",
+      "manager": "Branch Manager"
+    },
+    "dialog": {
+      "editTitle": "Edit Branch Data",
+      "addTitle": "Add New Branch",
+      "editDescription": "Update the branch information here.",
+      "addDescription": "Enter the new branch information here.",
+      "name": "Branch Name",
+      "namePlaceholder": "e.g., Olaya Branch",
+      "city": "City",
+      "cityPlaceholder": "e.g., Riyadh",
+      "region": "Region",
+      "selectRegion": "Select a region",
+      "brand": "Brand",
+      "selectBrand": "Select a brand",
+      "manager": "Branch Manager",
+      "managerPlaceholder": "Branch manager's name",
+      "regionalManager": "Regional Manager",
+      "regionalManagerPlaceholder": "Regional manager's name",
+      "location": "Location URL (optional)",
+      "locationPlaceholder": "https://maps.google.com/..."
+    },
+    "deleteDialog": {
+      "description": "Branch data for \"{branchName}\" will be permanently deleted. This action cannot be undone."
+    },
+    "toasts": {
+      "loadError": "Failed to load data from the database.",
+      "deleteSuccess": "Branch deleted successfully.",
+      "deleteError": "Failed to delete branch.",
+      "saveError": "Failed to save branch.",
+      "updateSuccess": "Branch updated successfully.",
+      "addSuccess": "Branch added successfully.",
+      "importSuccess": "Imported {count} branches successfully.",
+      "importNoData": "No valid data found in the file. Please check the column names.",
+      "importProcessError": "An error occurred while processing the file.",
+      "importReadError": "Failed to read the file."
+    }
+  },
+  "violations": {
+    "title": "Violations Log",
+    "addNew": "Record New Violation",
+    "listTitle": "All Violations",
+    "listDescription": "List of all municipal violations registered for the branches.",
+    "table": {
+      "number": "Violation Number",
+      "branch": "Branch",
+      "detectionDate": "Detection Date",
+      "objectionDeadline": "Objection Deadline",
+      "amount": "Amount",
+      "attachments": "Attachments",
+      "status": "Status"
+    },
+    "deleteDialog": {
+      "description": "Violation number \"{violationNumber}\" will be permanently deleted. This action cannot be undone."
+    },
+    "form": {
+      "editTitle": "Edit Violation",
+      "newTitle": "Record New Violation",
+      "step1Title": "1. Select Branch",
+      "step1Desc": "Please select the region, then brand and branch to record the violation.",
+      "region": "Operational Region",
+      "selectRegion": "Select a region",
+      "brand": "Brand",
+      "selectBrand": "Select a brand",
+      "branch": "Branch",
+      "selectBranch": "Select a branch",
+      "step2Title": "2. Violation Details",
+      "step2Desc": "Enter the violation information and its precise details.",
+      "violationNumber": "Violation Number",
+      "violationNumberPlaceholder": "e.g., 123456789",
+      "paymentNumber": "Payment Number (optional)",
+      "paymentNumberPlaceholder": "e.g., SADAD-98765",
+      "detectionDate": "Detection Date",
+      "selectDate": "Select a date",
+      "objectionDeadline": "Objection Deadline",
+      "fineAmount": "Fine Amount",
+      "fineAmountPlaceholder": "0.00",
+      "category": "General Category",
+      "selectCategory": "Select a category",
+      "subCategory": "Sub-Category",
+      "selectSubCategory": "Select a sub-category",
+      "attachments": "Attachments",
+      "noAttachments": "No attachments currently.",
+      "addAttachments": "Add new attachments",
+      "dropzoneHint": "Click to upload or drag and drop",
+      "dropzoneMeta": "Max 10MB per file",
+      "newFiles": "New files added:",
+      "status": "Violation Status"
+    },
+    "branchInfo": {
+      "title": "Branch Information",
+      "city": "City:",
+      "brand": "Brand:",
+      "manager": "Branch Manager:",
+      "regionalManager": "Regional Manager:",
+      "viewLocation": "View Location",
+      "selectBranch": "Please select a branch to view its information."
+    },
+    "toasts": {
+        "loadError": "Failed to load violations.",
+        "deleteSuccess": "Violation deleted successfully.",
+        "deleteError": "Failed to delete violation.",
+        "updateSuccess": "Violation updated successfully.",
+        "updateError": "An error occurred while updating the violation.",
+        "notFound": "Violation not found.",
+        "dataLoadError": "Failed to load data.",
+        "fileSizeErrorTitle": "Large files",
+        "fileSizeErrorDesc": "{count} files were ignored because their size exceeds 10MB.",
+        "saveSuccess": "Violation saved successfully.",
+        "saveError": "An error occurred while saving the violation."
+    }
+  },
+  "objections": {
+    "title": "Objection Tracking",
+    "addNew": "Register New Objection",
+    "listTitle": "Objections List",
+    "listDescription": "View and track all objections submitted for violations.",
+    "table": {
+        "number": "Objection Number",
+        "violationNumber": "Violation Number",
+        "branch": "Branch",
+        "date": "Objection Date",
+        "attachments": "Attachments",
+        "status": "Status"
+    },
+    "dialog": {
+        "title": "Register New Objection",
+        "description": "Enter the objection data and its associated violation.",
+        "number": "Objection Number",
+        "numberPlaceholder": "Enter objection number",
+        "date": "Objection Date",
+        "selectDate": "Select a date",
+        "violation": "Violation",
+        "selectViolation": "Select violation number...",
+        "details": "Objection Details",
+        "detailsPlaceholder": "Explain your objection reasons here...",
+        "attachments": "Attachments (optional)",
+        "dropzoneHint": "Click to upload or drag and drop",
+        "dropzoneMeta": "Max 10MB per file",
+        "selectedFiles": "Selected files:"
+    },
+    "deleteDialog": {
+        "description": "Objection number \"{objectionNumber}\" will be permanently deleted. This action cannot be undone."
+    },
+    "statusMenu": {
+        "changeStatus": "Change Status",
+        "pending": "Pending Review",
+        "approved": "Approved",
+        "rejected": "Rejected"
+    },
+    "toasts": {
+        "loadError": "Failed to load data from the database.",
+        "violationNotFound": "The selected violation does not exist.",
+        "saveSuccess": "Objection registered successfully.",
+        "saveError": "Failed to save objection.",
+        "fileSizeErrorTitle": "Large files",
+        "fileSizeErrorDesc": "{count} files were ignored because their size exceeds 10MB.",
+        "deleteSuccess": "Objection deleted successfully.",
+        "deleteError": "Failed to delete objection.",
+        "statusUpdateError": "Failed to update status.",
+        "statusApproved": "Objection approved and violation status updated to 'Filed'.",
+        "statusChanged": "Objection status changed to \"{status}\"."
+    }
+  },
+  "users": {
+    "title": "User and Permission Management",
+    "addNew": "Add User",
+    "listTitle": "Users List",
+    "listDescription": "Manage user accounts and control their permissions.",
+    "table": {
+      "name": "Name",
+      "email": "Email",
+      "role": "Role",
+      "status": "Status"
+    },
+    "dialog": {
+      "editTitle": "Edit User Data",
+      "addTitle": "Add New User",
+      "description": "Enter the user's details and granted permissions.",
+      "name": "Full Name",
+      "namePlaceholder": "e.g., Abdullah Al-Saleh",
+      "email": "Email",
+      "emailPlaceholder": "user@example.com",
+      "role": "Role",
+      "selectRole": "Select a role for the user",
+      "branch": "Branch",
+      "selectBranch": "Select a branch",
+      "region": "Region",
+      "selectRegion": "Select a region"
+    },
+    "actions": {
+        "toggleActive": "Activate User",
+        "toggleInactive": "Deactivate User"
+    },
+    "deleteDialog": {
+      "description": "User \"{userName}\" will be permanently deleted. This action cannot be undone."
+    },
+    "toasts": {
+      "loadError": "Failed to load data.",
+      "deleteSuccess": "User deleted successfully.",
+      "deleteError": "Failed to delete user.",
+      "statusToggleSuccess": "User {userName}'s status has been changed.",
+      "statusToggleError": "Failed to change user status.",
+      "saveError": "Failed to save user data.",
+      "updateSuccess": "User data updated successfully.",
+      "addSuccess": "User added successfully. Credentials must be created separately."
+    }
+  },
+  "management": {
+    "title": "System Data Management",
+    "tabs": {
+        "brands": "Brands",
+        "regions": "Regions",
+        "categories": "Violation Categories"
+    },
+    "brands": {
+        "title": "Manage Brands",
+        "description": "Add or delete commercial brands in the system.",
+        "placeholder": "New brand name",
+        "add": "Add",
+        "tableHeader": "Brand Name"
+    },
+    "regions": {
+        "title": "Manage Regions",
+        "description": "Add or delete operational regions in the system.",
+        "placeholder": "New region name",
+        "add": "Add",
+        "tableHeader": "Region Name"
+    },
+    "categories": {
+        "title": "Manage Violation Categories",
+        "description": "Manage main and sub-categories for violations and their codes.",
+        "mainCatCodePlaceholder": "Category Code",
+        "mainCatNamePlaceholder": "New main category name",
+        "addMainCat": "Add Main Category",
+        "subCatCodePlaceholder": "Code",
+        "subCatNamePlaceholder": "Sub-category name...",
+        "addSubCat": "Add",
+        "noSubCats": "No sub-categories."
+    },
+    "toasts": {
+        "loadError": "Failed to load data from the database.",
+        "addEmptyError": "Cannot add an empty value.",
+        "addDuplicateError": "This value already exists.",
+        "saveError": "Failed to save.",
+        "addSuccess": "Added successfully.",
+        "deleteSuccess": "Deleted successfully.",
+        "deleteError": "Failed to delete.",
+        "mainCatCodeRequired": "Please enter the code and name for the main category.",
+        "mainCatCodeExists": "Main category code already exists.",
+        "mainCatAddSuccess": "Main category added successfully.",
+        "mainCatSaveError": "Failed to save main category.",
+        "mainCatDeleteSuccess": "Main category deleted.",
+        "mainCatDeleteError": "Failed to delete main category.",
+        "subCatCodeRequired": "Please enter the code and name for the sub-category.",
+        "subCatCodeExists": "Sub-category code already exists.",
+        "subCatAddSuccess": "Sub-category added successfully.",
+        "subCatSaveError": "Failed to save sub-category.",
+        "subCatDeleteSuccess": "Sub-category deleted.",
+        "subCatDeleteError": "Failed to delete sub-category."
+    }
+  },
+  "auth": {
+    "loginTitle": "Login",
+    "loginDescription": "Enter your email and password to access your account.",
+    "emailLabel": "Email",
+    "emailPlaceholder": "m@example.com",
+    "passwordLabel": "Password",
+    "submitLogin": "Login",
+    "submittingLogin": "Logging in...",
+    "noAccount": "Don't have an account?",
+    "signUp": "Sign up",
+    "registerTitle": "Create a new account",
+    "registerDescription": "Enter your details to create a new account in the system.",
+    "nameLabel": "Full Name",
+    "namePlaceholder": "Abdullah Al-Saleh",
+    "submitRegister": "Create account",
+    "submittingRegister": "Creating...",
+    "hasAccount": "Already have an account?",
+    "loginHere": "Login",
+    "verifying": "Verifying Identity",
+    "pleaseWait": "Please wait...",
+    "toasts": {
+        "loginMissingFields": "Please enter email and password.",
+        "loginFailed": "Login Failed",
+        "loginErrorDesc": "The email or password is incorrect.",
+        "registerSuccess": "Success",
+        "registerSuccessDesc": "Your account has been created successfully. Logging you in...",
+        "registerFailed": "Registration failed. Please try again.",
+        "emailInUse": "This email is already registered."
+    }
+  },
+  "roles": {
+    "branch_manager": "Branch Manager",
+    "regional_manager": "Regional Manager",
+    "quality_officer": "Quality Officer",
+    "senior_management": "Senior Management",
+    "system_admin": "System Admin"
+  },
+  "violationStatuses": {
+    "paid": "Paid",
+    "unpaid": "Unpaid",
+    "filed": "Filed"
+  },
+  "objectionStatuses": {
+    "approved": "Approved",
+    "pending": "Pending",
+    "rejected": "Rejected"
+  },
+  "userStatuses": {
+    "active": "Active",
+    "inactive": "Inactive"
+  }
+}

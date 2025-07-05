@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { Shield } from 'lucide-react';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { collection, addDoc } from 'firebase/firestore';
+import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -29,6 +30,7 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 export default function RegisterPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<RegisterFormValues>({
@@ -52,20 +54,20 @@ export default function RegisterPage() {
       });
 
       toast({
-        title: 'نجاح',
-        description: 'تم إنشاء حسابك بنجاح. جاري تسجيل الدخول...',
+        title: t('auth.toasts.registerSuccess'),
+        description: t('auth.toasts.registerSuccessDesc'),
       });
 
       router.push('/');
     } catch (error: any) {
       console.error("Registration failed:", error);
-      let description = 'فشل إنشاء الحساب. الرجاء المحاولة مرة أخرى.';
+      let description = t('auth.toasts.registerFailed');
       if (error.code === 'auth/email-already-in-use') {
-        description = 'هذا البريد الإلكتروني مسجل بالفعل.';
+        description = t('auth.toasts.emailInUse');
       }
       toast({
         variant: 'destructive',
-        title: 'خطأ',
+        title: t('common.error'),
         description: description,
       });
     } finally {
@@ -81,8 +83,8 @@ export default function RegisterPage() {
             <div className="flex justify-center items-center mb-4">
                 <Shield className="h-10 w-10 text-primary" />
             </div>
-            <CardTitle className="text-2xl">إنشاء حساب جديد</CardTitle>
-            <CardDescription>أدخل بياناتك لإنشاء حساب جديد في النظام.</CardDescription>
+            <CardTitle className="text-2xl">{t('auth.registerTitle')}</CardTitle>
+            <CardDescription>{t('auth.registerDescription')}</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4">
             <FormField
@@ -90,9 +92,9 @@ export default function RegisterPage() {
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>الاسم الكامل</FormLabel>
+                  <FormLabel>{t('auth.nameLabel')}</FormLabel>
                   <FormControl>
-                    <Input placeholder="عبدالله الصالح" {...field} disabled={isLoading} />
+                    <Input placeholder={t('auth.namePlaceholder')} {...field} disabled={isLoading} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -103,9 +105,9 @@ export default function RegisterPage() {
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>البريد الإلكتروني</FormLabel>
+                  <FormLabel>{t('auth.emailLabel')}</FormLabel>
                   <FormControl>
-                    <Input type="email" placeholder="m@example.com" {...field} disabled={isLoading} />
+                    <Input type="email" placeholder={t('auth.emailPlaceholder')} {...field} disabled={isLoading} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -116,7 +118,7 @@ export default function RegisterPage() {
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>كلمة المرور</FormLabel>
+                  <FormLabel>{t('auth.passwordLabel')}</FormLabel>
                   <FormControl>
                     <Input type="password" placeholder="••••••••" {...field} disabled={isLoading} />
                   </FormControl>
@@ -127,12 +129,12 @@ export default function RegisterPage() {
           </CardContent>
           <CardFooter className="flex-col gap-2">
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? 'جاري الإنشاء...' : 'إنشاء حساب'}
+              {isLoading ? t('auth.submittingRegister') : t('auth.submitRegister')}
             </Button>
             <div className="mt-2 text-center text-sm">
-                لديك حساب بالفعل؟{' '}
+                {t('auth.hasAccount')}{' '}
                 <Link href="/login" className="underline">
-                    تسجيل الدخول
+                    {t('auth.loginHere')}
                 </Link>
             </div>
           </CardFooter>

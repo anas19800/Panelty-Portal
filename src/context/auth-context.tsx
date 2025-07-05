@@ -8,6 +8,7 @@ import { auth, db } from '@/lib/firebase';
 import type { User } from '@/lib/mock-data';
 import type { User as AuthUser } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
+import { useTranslation } from 'react-i18next';
 
 interface AuthContextType {
   authUser: AuthUser | null | undefined;
@@ -87,6 +88,7 @@ export const PageGuard = ({
     const { user, loading } = useAuth();
     const router = useRouter();
     const { getPermission } = require('@/lib/permissions'); // Use require to avoid circular dependency issues at build time
+    const { t } = useTranslation();
 
     const userPermission = getPermission(user?.role, feature);
     
@@ -110,7 +112,7 @@ export const PageGuard = ({
         return (
              <div className="flex items-center justify-center min-h-screen bg-background">
                 <div className="flex flex-col items-center gap-4 text-center">
-                    <p className="text-muted-foreground">جاري التحميل أو ليس لديك الصلاحية...</p>
+                    <p className="text-muted-foreground">{t('common.noAccess')}</p>
                 </div>
             </div>
         );

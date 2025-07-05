@@ -4,6 +4,7 @@ import React, { useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { signOut } from 'firebase/auth';
+import { useTranslation } from 'react-i18next';
 
 import { auth } from '@/lib/firebase';
 import { useAuth } from '@/context/auth-context';
@@ -41,20 +42,22 @@ import {
   LifeBuoy,
   Database,
 } from 'lucide-react';
+import { LanguageSwitcher } from './language-switcher';
 
 const allNavItems = [
-  { href: '/', label: 'لوحة المعلومات', icon: Home, feature: PERMISSIONS.DASHBOARD },
-  { href: '/violations', label: 'المخالفات', icon: FileText, feature: PERMISSIONS.VIOLATIONS },
-  { href: '/objections', label: 'الاعتراضات', icon: Gavel, feature: PERMISSIONS.OBJECTIONS },
-  { href: '/branches', label: 'الفروع', icon: Building, feature: PERMISSIONS.BRANCHES },
-  { href: '/settings/users', label: 'المستخدمون', icon: Users, feature: PERMISSIONS.USERS },
-  { href: '/settings/management', label: 'إدارة البيانات', icon: Database, feature: PERMISSIONS.MANAGEMENT },
+  { href: '/', labelKey: 'nav.dashboard', icon: Home, feature: PERMISSIONS.DASHBOARD },
+  { href: '/violations', labelKey: 'nav.violations', icon: FileText, feature: PERMISSIONS.VIOLATIONS },
+  { href: '/objections', labelKey: 'nav.objections', icon: Gavel, feature: PERMISSIONS.OBJECTIONS },
+  { href: '/branches', labelKey: 'nav.branches', icon: Building, feature: PERMISSIONS.BRANCHES },
+  { href: '/settings/users', labelKey: 'nav.users', icon: Users, feature: PERMISSIONS.USERS },
+  { href: '/settings/management', labelKey: 'nav.dataManagement', icon: Database, feature: PERMISSIONS.MANAGEMENT },
 ];
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { authUser, user, loading } = useAuth();
+  const { t } = useTranslation();
 
   useEffect(() => {
     // When no longer loading, if there's no authenticated user, redirect to login
@@ -75,8 +78,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="flex flex-col items-center gap-4 text-center">
           <Shield className="h-12 w-12 text-primary animate-pulse" />
-          <h1 className="text-xl font-semibold">جاري التحقق من الهوية</h1>
-          <p className="text-muted-foreground">الرجاء الانتظار...</p>
+          <h1 className="text-xl font-semibold">{t('auth.verifying')}</h1>
+          <p className="text-muted-foreground">{t('auth.pleaseWait')}</p>
         </div>
       </div>
     );
@@ -95,7 +98,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <Link href="/"><Shield className="size-6" /></Link>
              </Button>
             <h1 className="text-xl font-semibold text-primary-foreground group-data-[collapsible=icon]:hidden">
-              رصد
+              {t('app.title')}
             </h1>
           </div>
         </SidebarHeader>
@@ -107,13 +110,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   asChild
                   isActive={pathname.startsWith(item.href) && (item.href !== '/' || pathname === '/')}
                   tooltip={{
-                    children: item.label,
+                    children: t(item.labelKey),
                     side: 'left',
                   }}
                 >
                   <Link href={item.href}>
                     <item.icon />
-                    <span>{item.label}</span>
+                    <span>{t(item.labelKey)}</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -124,8 +127,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       <SidebarInset>
         <header className="sticky top-0 z-10 flex h-16 items-center justify-between gap-4 border-b bg-background px-4 sm:px-6">
             <SidebarTrigger className="sm:hidden" />
-            <div/>
-            <UserMenu />
+            <div className="flex items-center gap-2">
+                <LanguageSwitcher />
+                <UserMenu />
+            </div>
         </header>
         <div className="p-4 sm:p-6">{children}</div>
       </SidebarInset>
@@ -136,6 +141,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 function UserMenu() {
   const { authUser, user } = useAuth();
   const router = useRouter();
+  const { t } = useTranslation();
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -153,7 +159,7 @@ function UserMenu() {
           <Avatar>
             <AvatarImage
               src={authUser?.photoURL ?? "https://placehold.co/32x32.png"}
-              alt="صورة المستخدم"
+              alt={t('common.userAvatar')}
               data-ai-hint="user avatar"
             />
             <AvatarFallback>{user?.email?.[0].toUpperCase() ?? 'U'}</AvatarFallback>
@@ -165,16 +171,16 @@ function UserMenu() {
         <DropdownMenuSeparator />
         <DropdownMenuItem disabled>
           <Settings className="mr-2 h-4 w-4" />
-          <span>الإعدادات</span>
+          <span>{t('nav.settings')}</span>
         </DropdownMenuItem>
         <DropdownMenuItem disabled>
           <LifeBuoy className="mr-2 h-4 w-4" />
-          <span>الدعم</span>
+          <span>{t('nav.support')}</span>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleLogout}>
           <LogOut className="mr-2 h-4 w-4" />
-          <span>تسجيل الخروج</span>
+          <span>{t('nav.logout')}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

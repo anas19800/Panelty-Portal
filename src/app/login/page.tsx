@@ -18,10 +18,12 @@ import { Shield } from 'lucide-react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
+import { useTranslation } from 'react-i18next';
 
 export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -31,8 +33,8 @@ export default function LoginPage() {
     if (!email || !password) {
         toast({
             variant: 'destructive',
-            title: 'خطأ',
-            description: 'الرجاء إدخال البريد الإلكتروني وكلمة المرور.',
+            title: t('common.error'),
+            description: t('auth.toasts.loginMissingFields'),
         });
         return;
     }
@@ -44,8 +46,8 @@ export default function LoginPage() {
       console.error("Login failed:", error);
       toast({
         variant: 'destructive',
-        title: 'فشل تسجيل الدخول',
-        description: 'البريد الإلكتروني أو كلمة المرور غير صحيحة.',
+        title: t('auth.toasts.loginFailed'),
+        description: t('auth.toasts.loginErrorDesc'),
       });
     } finally {
       setIsLoading(false);
@@ -59,16 +61,16 @@ export default function LoginPage() {
           <div className="flex justify-center items-center mb-4">
               <Shield className="h-10 w-10 text-primary" />
           </div>
-          <CardTitle className="text-2xl">تسجيل الدخول</CardTitle>
-          <CardDescription>أدخل بريدك الإلكتروني وكلمة المرور للوصول إلى حسابك.</CardDescription>
+          <CardTitle className="text-2xl">{t('auth.loginTitle')}</CardTitle>
+          <CardDescription>{t('auth.loginDescription')}</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
           <div className="grid gap-2">
-            <Label htmlFor="email">البريد الإلكتروني</Label>
+            <Label htmlFor="email">{t('auth.emailLabel')}</Label>
             <Input
               id="email"
               type="email"
-              placeholder="m@example.com"
+              placeholder={t('auth.emailPlaceholder')}
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -76,7 +78,7 @@ export default function LoginPage() {
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="password">كلمة المرور</Label>
+            <Label htmlFor="password">{t('auth.passwordLabel')}</Label>
             <Input 
               id="password" 
               type="password" 
@@ -89,12 +91,12 @@ export default function LoginPage() {
         </CardContent>
         <CardFooter className="flex-col gap-2">
           <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? 'جاري تسجيل الدخول...' : 'تسجيل الدخول'}
+            {isLoading ? t('auth.submittingLogin') : t('auth.submitLogin')}
           </Button>
           <div className="mt-2 text-center text-sm">
-            ليس لديك حساب؟{' '}
+            {t('auth.noAccount')}{' '}
             <Link href="/register" className="underline">
-              إنشاء حساب
+              {t('auth.signUp')}
             </Link>
           </div>
         </CardFooter>
