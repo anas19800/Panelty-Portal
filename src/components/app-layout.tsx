@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { signOut } from 'firebase/auth';
@@ -58,8 +58,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { authUser, user, loading } = useAuth();
   const { t } = useTranslation();
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
     // When no longer loading, if there's no authenticated user, redirect to login
     if (!loading && !authUser) {
       router.push('/login');
@@ -78,8 +80,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="flex flex-col items-center gap-4 text-center">
           <Shield className="h-12 w-12 text-primary animate-pulse" />
-          <h1 className="text-xl font-semibold">{t('auth.verifying')}</h1>
-          <p className="text-muted-foreground">{t('auth.pleaseWait')}</p>
+          {isClient && (
+            <>
+              <h1 className="text-xl font-semibold">{t('auth.verifying')}</h1>
+              <p className="text-muted-foreground">{t('auth.pleaseWait')}</p>
+            </>
+          )}
         </div>
       </div>
     );

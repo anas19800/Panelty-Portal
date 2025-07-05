@@ -18,7 +18,7 @@ function DynamicHtml({ children }: { children: React.ReactNode }) {
     }, [i18n, i18n.language]);
 
     return (
-        <html lang={i18n.language} dir={i18n.dir(i18n.language)}>
+        <html lang={i18n.language} dir={i18n.dir(i18n.language)} suppressHydrationWarning>
             <head>
                 <title>{t('app.title')}</title>
                 <meta name="description" content={t('app.description')} />
