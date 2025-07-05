@@ -86,13 +86,14 @@ function ManagementPageContent() {
   useEffect(() => {
     async function fetchData() {
         try {
-            const regionsSnapshot = await getDocs(collection(db, 'regions'));
+            const [regionsSnapshot, brandsSnapshot, categoriesSnapshot] = await Promise.all([
+                getDocs(collection(db, 'regions')),
+                getDocs(collection(db, 'brands')),
+                getDocs(collection(db, 'violationCategories'))
+            ]);
+
             setRegions(regionsSnapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name })));
-            
-            const brandsSnapshot = await getDocs(collection(db, 'brands'));
             setBrands(brandsSnapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name })));
-            
-            const categoriesSnapshot = await getDocs(collection(db, 'violationCategories'));
             setCategories(categoriesSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as DbCategory)));
         } catch (error) {
             console.error("Failed to load data from Firestore", error);

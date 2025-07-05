@@ -79,23 +79,31 @@ export default function Dashboard() {
             objectionsQuery = query(objectionsQuery, where('region', '==', user.region));
           }
         }
+        
+        const [
+          violationsSnapshot,
+          objectionsSnapshot,
+          regionsSnapshot,
+          brandsSnapshot,
+          branchesSnapshot,
+        ] = await Promise.all([
+          getDocs(violationsQuery),
+          getDocs(objectionsQuery),
+          getDocs(collection(db, 'regions')),
+          getDocs(collection(db, 'brands')),
+          getDocs(collection(db, 'branches')),
+        ]);
 
-        const violationsSnapshot = await getDocs(violationsQuery);
         const violationsData = violationsSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Violation[];
         setViolations(violationsData);
 
-        const objectionsSnapshot = await getDocs(objectionsQuery);
         const objectionsData = objectionsSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Objection[];
         setObjections(objectionsData);
 
-        // Fetch data for filters
-        const regionsSnapshot = await getDocs(collection(db, 'regions'));
         setRegions(regionsSnapshot.docs.map((doc) => ({ id: doc.id, name: doc.data().name })));
 
-        const brandsSnapshot = await getDocs(collection(db, 'brands'));
         setBrands(brandsSnapshot.docs.map((doc) => ({ id: doc.id, name: doc.data().name })));
 
-        const branchesSnapshot = await getDocs(collection(db, 'branches'));
         const branchesData = branchesSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Branch[];
         setAllBranches(branchesData);
 

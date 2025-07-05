@@ -67,22 +67,29 @@ function EditViolationPageContent({ violationId }: { violationId: string }) {
   useEffect(() => {
     async function fetchData() {
         try {
-            const regionsSnapshot = await getDocs(collection(db, 'regions'));
+            const [
+                regionsSnapshot,
+                brandsSnapshot,
+                branchesSnapshot,
+                categoriesSnapshot,
+                violationSnap,
+            ] = await Promise.all([
+                getDocs(collection(db, 'regions')),
+                getDocs(collection(db, 'brands')),
+                getDocs(collection(db, 'branches')),
+                getDocs(collection(db, 'violationCategories')),
+                getDoc(doc(db, 'violations', violationId))
+            ]);
+            
             setRegions(regionsSnapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name })));
             
-            const brandsSnapshot = await getDocs(collection(db, 'brands'));
             setAllBrands(brandsSnapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name })));
 
-            const branchesSnapshot = await getDocs(collection(db, 'branches'));
             const branchesData = branchesSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })) as Branch[];
             setAllBranches(branchesData);
 
-            const categoriesSnapshot = await getDocs(collection(db, 'violationCategories'));
             const categoriesData = categoriesSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })) as ViolationCategory[];
             setCategories(categoriesData);
-
-            const violationRef = doc(db, 'violations', violationId);
-            const violationSnap = await getDoc(violationRef);
 
             if (violationSnap.exists()) {
                 const violationData = violationSnap.data() as Violation;

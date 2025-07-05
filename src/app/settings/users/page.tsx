@@ -53,13 +53,14 @@ function UsersPageContent() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const usersSnapshot = await getDocs(collection(db, "users"));
+        const [usersSnapshot, branchesSnapshot, regionsSnapshot] = await Promise.all([
+            getDocs(collection(db, "users")),
+            getDocs(collection(db, 'branches')),
+            getDocs(collection(db, 'regions'))
+        ]);
+        
         setUsers(usersSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })) as User[]);
-        
-        const branchesSnapshot = await getDocs(collection(db, 'branches'));
         setBranches(branchesSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })) as Branch[]);
-        
-        const regionsSnapshot = await getDocs(collection(db, 'regions'));
         setRegions(regionsSnapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name })));
 
       } catch (error) {

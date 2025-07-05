@@ -57,11 +57,12 @@ export default function ObjectionsPage() {
   useEffect(() => {
     async function fetchData() {
         try {
-            const objectionsSnapshot = await getDocs(collection(db, 'objections'));
+            const [objectionsSnapshot, violationsSnapshot] = await Promise.all([
+                getDocs(collection(db, 'objections')),
+                getDocs(collection(db, 'violations'))
+            ]);
+
             const allObjections = objectionsSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })) as Objection[];
-            
-            // Add branchId and region to objections if they don't exist for filtering
-            const violationsSnapshot = await getDocs(collection(db, 'violations'));
             const allViolations = violationsSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })) as Violation[];
             setViolations(allViolations);
             

@@ -61,16 +61,21 @@ function NewViolationPageContent() {
   useEffect(() => {
     async function fetchData() {
         try {
-            const regionsSnapshot = await getDocs(collection(db, 'regions'));
+            const [
+                regionsSnapshot,
+                brandsSnapshot,
+                branchesSnapshot,
+                categoriesSnapshot,
+            ] = await Promise.all([
+                getDocs(collection(db, 'regions')),
+                getDocs(collection(db, 'brands')),
+                getDocs(collection(db, 'branches')),
+                getDocs(collection(db, 'violationCategories')),
+            ]);
+
             setRegions(regionsSnapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name })));
-            
-            const brandsSnapshot = await getDocs(collection(db, 'brands'));
             setAllBrands(brandsSnapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name })));
-
-            const branchesSnapshot = await getDocs(collection(db, 'branches'));
             setAllBranches(branchesSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })) as Branch[]);
-
-            const categoriesSnapshot = await getDocs(collection(db, 'violationCategories'));
             setCategories(categoriesSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })) as ViolationCategory[]);
         } catch (error) {
             console.error('Failed to load data from Firestore', error);

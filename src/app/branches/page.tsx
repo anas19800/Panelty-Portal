@@ -61,13 +61,14 @@ export default function BranchesPage() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const branchesSnapshot = await getDocs(collection(db, 'branches'));
+        const [branchesSnapshot, regionsSnapshot, brandsSnapshot] = await Promise.all([
+            getDocs(collection(db, 'branches')),
+            getDocs(collection(db, 'regions')),
+            getDocs(collection(db, 'brands'))
+        ]);
+        
         setBranches(branchesSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })) as Branch[]);
-        
-        const regionsSnapshot = await getDocs(collection(db, 'regions'));
         setRegions(regionsSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })) as Region[]);
-        
-        const brandsSnapshot = await getDocs(collection(db, 'brands'));
         setBrands(brandsSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })) as Brand[]);
 
       } catch (error) {
