@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
@@ -94,8 +94,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <SidebarProvider>
       <Sidebar
-        side="right"
-        className="border-l"
+        side="left"
+        className="border-r"
         collapsible="icon"
       >
         <SidebarHeader className="p-4">
@@ -117,7 +117,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   isActive={pathname.startsWith(item.href) && (item.href !== '/' || pathname === '/')}
                   tooltip={{
                     children: t(item.labelKey),
-                    side: 'left',
+                    side: 'right',
                   }}
                 >
                   <Link href={item.href}>
@@ -131,11 +131,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         </SidebarContent>
       </Sidebar>
       <SidebarInset>
-        <header className="sticky top-0 z-10 flex h-16 items-center justify-between gap-4 border-b bg-background px-4 sm:px-6">
+        <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background px-4 sm:px-6">
             <SidebarTrigger className="sm:hidden" />
-            <div className="flex items-center gap-2">
-                <LanguageSwitcher />
-                <UserMenu />
+            <div className="flex flex-1 justify-end">
+              <div className="flex items-center gap-2">
+                  <LanguageSwitcher />
+                  <UserMenu />
+              </div>
             </div>
         </header>
         <div className="p-4 sm:p-6">{children}</div>
