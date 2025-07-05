@@ -30,6 +30,7 @@ import { useAuth } from '@/context/auth-context';
 import { getPermission, PERMISSIONS, ROLES } from '@/lib/permissions';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 
 const objectionSchema = z.object({
   number: z.string().min(1, 'Number is required.'),
