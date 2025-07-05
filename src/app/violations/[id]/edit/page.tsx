@@ -152,7 +152,19 @@ function EditViolationPageContent({ violationId }: { violationId: string }) {
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
-        setNewImageFiles(Array.from(event.target.files));
+      const maxFileSize = 10 * 1024 * 1024; // 10MB
+      const allFiles = Array.from(event.target.files);
+      const validFiles = allFiles.filter(file => file.size <= maxFileSize);
+      const oversizedFiles = allFiles.filter(file => file.size > maxFileSize);
+
+      if (oversizedFiles.length > 0) {
+        toast({
+          variant: 'destructive',
+          title: 'ملفات كبيرة الحجم',
+          description: `تم تجاهل ${oversizedFiles.length} ملف لأن حجمها يتجاوز 10 ميجابايت.`,
+        });
+      }
+      setNewImageFiles(validFiles);
     }
   };
 
@@ -256,7 +268,7 @@ function EditViolationPageContent({ violationId }: { violationId: string }) {
                 <FormField control={form.control} name="subCategory" render={({ field }) => (<FormItem><FormLabel>الفئة الفرعية</FormLabel><Select onValueChange={field.onChange} value={field.value || ''} disabled={!watchCategory}><FormControl><SelectTrigger><SelectValue placeholder="اختر فئة فرعية" /></SelectTrigger></FormControl><SelectContent>{availableSubCategories.map(sc => <SelectItem key={sc.code} value={sc.code}>{`${sc.code} - ${sc.name}`}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
                 
                 <div className="md:col-span-2 space-y-2">
-                    <FormLabel>الصور المرفقة</FormLabel>
+                    <FormLabel>المرفقات</FormLabel>
                     {existingImageUrls.length > 0 ? (
                         <div className="flex flex-wrap gap-2 mb-4">
                             {existingImageUrls.map((url, index) => (
@@ -270,14 +282,14 @@ function EditViolationPageContent({ violationId }: { violationId: string }) {
                                 </div>
                             ))}
                         </div>
-                    ) : <p className="text-sm text-muted-foreground">لا توجد صور مرفقة حالياً.</p>}
+                    ) : <p className="text-sm text-muted-foreground">لا توجد مرفقات حالياً.</p>}
 
                     <div className="flex items-center justify-center w-full">
                         <label htmlFor="dropzone-file" className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted">
                         <div className="flex flex-col items-center justify-center pt-5 pb-6">
                             <Upload className="w-8 h-8 mb-4 text-muted-foreground" />
-                            <p className="mb-2 text-sm text-muted-foreground"><span className="font-semibold">إضافة صور جديدة</span> أو اسحب وأفلت</p>
-                            <p className="text-xs text-muted-foreground">PNG, JPG</p>
+                            <p className="mb-2 text-sm text-muted-foreground"><span className="font-semibold">إضافة مرفقات جديدة</span> أو اسحب وأفلت</p>
+                            <p className="text-xs text-muted-foreground">الحد الأقصى 10 ميجابايت لكل ملف</p>
                         </div>
                         <Input id="dropzone-file" type="file" className="hidden" multiple onChange={handleFileChange} />
                         </label>
@@ -329,10 +341,10 @@ function EditViolationPageContent({ violationId }: { violationId: string }) {
   );
 }
 
-export default function EditViolationPage({ params: { id } }: { params: { id: string } }) {
+export default function EditViolationPage({ params }: { params: { id: string } }) {
     return (
         <PageGuard feature={PERMISSIONS.VIOLATIONS} requiredPermission="write">
-            <EditViolationPageContent violationId={id} />
+            <EditViolationPageContent violationId={params.id} />
         </PageGuard>
     )
 }

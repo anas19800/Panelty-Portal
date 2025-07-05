@@ -121,7 +121,19 @@ function NewViolationPageContent() {
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
-      setImageFiles(Array.from(event.target.files));
+      const maxFileSize = 10 * 1024 * 1024; // 10MB
+      const allFiles = Array.from(event.target.files);
+      const validFiles = allFiles.filter(file => file.size <= maxFileSize);
+      const oversizedFiles = allFiles.filter(file => file.size > maxFileSize);
+
+      if (oversizedFiles.length > 0) {
+        toast({
+          variant: 'destructive',
+          title: 'ملفات كبيرة الحجم',
+          description: `تم تجاهل ${oversizedFiles.length} ملف لأن حجمها يتجاوز 10 ميجابايت.`,
+        });
+      }
+      setImageFiles(validFiles);
     }
   };
 
@@ -221,13 +233,13 @@ function NewViolationPageContent() {
                 <FormField control={form.control} name="category" render={({ field }) => (<FormItem><FormLabel>الفئة العامة</FormLabel><Select onValueChange={field.onChange} value={field.value || ''}><FormControl><SelectTrigger><SelectValue placeholder="اختر فئة" /></SelectTrigger></FormControl><SelectContent>{categories.map(c => <SelectItem key={c.mainCategoryCode} value={c.mainCategoryCode}>{c.mainCategory}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
                 <FormField control={form.control} name="subCategory" render={({ field }) => (<FormItem><FormLabel>الفئة الفرعية</FormLabel><Select onValueChange={field.onChange} value={field.value || ''} disabled={!watchCategory}><FormControl><SelectTrigger><SelectValue placeholder="اختر فئة فرعية" /></SelectTrigger></FormControl><SelectContent>{availableSubCategories.map(sc => <SelectItem key={sc.code} value={sc.code}>{`${sc.code} - ${sc.name}`}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
                 <div className="md:col-span-2 space-y-2">
-                  <FormLabel>الصور المرفقة</FormLabel>
+                  <FormLabel>المرفقات</FormLabel>
                   <div className="flex items-center justify-center w-full">
                     <label htmlFor="dropzone-file" className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted">
                       <div className="flex flex-col items-center justify-center pt-5 pb-6">
                         <Upload className="w-8 h-8 mb-4 text-muted-foreground" />
                         <p className="mb-2 text-sm text-muted-foreground"><span className="font-semibold">انقر للرفع</span> أو اسحب وأفلت</p>
-                        <p className="text-xs text-muted-foreground">PNG, JPG</p>
+                        <p className="text-xs text-muted-foreground">الحد الأقصى 10 ميجابايت لكل ملف</p>
                       </div>
                       <Input id="dropzone-file" type="file" className="hidden" multiple onChange={handleFileChange} />
                     </label>

@@ -105,7 +105,19 @@ export default function ObjectionsPage() {
   
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
-        setAttachments(Array.from(event.target.files));
+      const maxFileSize = 10 * 1024 * 1024; // 10MB
+      const allFiles = Array.from(event.target.files);
+      const validFiles = allFiles.filter(file => file.size <= maxFileSize);
+      const oversizedFiles = allFiles.filter(file => file.size > maxFileSize);
+
+      if (oversizedFiles.length > 0) {
+        toast({
+          variant: 'destructive',
+          title: 'ملفات كبيرة الحجم',
+          description: `تم تجاهل ${oversizedFiles.length} ملف لأن حجمها يتجاوز 10 ميجابايت.`,
+        });
+      }
+      setAttachments(validFiles);
     }
   };
   
@@ -366,7 +378,7 @@ export default function ObjectionsPage() {
                             <div className="flex flex-col items-center justify-center pt-5 pb-6">
                                 <Upload className="w-8 h-8 mb-4 text-muted-foreground" />
                                 <p className="mb-2 text-sm text-muted-foreground"><span className="font-semibold">انقر للرفع</span> أو اسحب وأفلت</p>
-                                <p className="text-xs text-muted-foreground">صورة, فيديو, PDF</p>
+                                <p className="text-xs text-muted-foreground">الحد الأقصى 10 ميجابايت لكل ملف</p>
                             </div>
                             <Input id="dropzone-file" type="file" className="hidden" multiple onChange={handleFileChange} />
                         </label>
