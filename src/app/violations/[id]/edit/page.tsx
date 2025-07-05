@@ -182,13 +182,14 @@ function EditViolationPageContent({ violationId }: { violationId: string }) {
         const subCategory = category?.subCategories.find(sc => sc.code === data.subCategory);
 
         const storage = getStorage();
-        const uploadedImageUrls: string[] = [...existingImageUrls];
-        for (const file of newImageFiles) {
-            const storageRef = ref(storage, `violations/${violationId}/${file.name}-${Date.now()}`);
-            const snapshot = await uploadBytes(storageRef, file);
-            const downloadURL = await getDownloadURL(snapshot.ref);
-            uploadedImageUrls.push(downloadURL);
-        }
+        const newUrlsPromises = newImageFiles.map(file => {
+            const storageRef = ref(storage, `violations/${violationId}/${Date.now()}-${file.name}`);
+            return uploadBytes(storageRef, file)
+                .then(snapshot => getDownloadURL(snapshot.ref));
+        });
+
+        const newlyUploadedUrls = await Promise.all(newUrlsPromises);
+        const uploadedImageUrls = [...existingImageUrls, ...newlyUploadedUrls];
 
         const updatedViolationData = {
             violationNumber: data.violationNumber,
@@ -291,7 +292,7 @@ function EditViolationPageContent({ violationId }: { violationId: string }) {
                             <p className="mb-2 text-sm text-muted-foreground"><span className="font-semibold">إضافة مرفقات جديدة</span> أو اسحب وأفلت</p>
                             <p className="text-xs text-muted-foreground">الحد الأقصى 10 ميجابايت لكل ملف</p>
                         </div>
-                        <Input id="dropzone-file" type="file" className="hidden" multiple onChange={handleFileChange} />
+                        <Input id="dropzone-file" type="file" className="hidden" multiple onChange={handleFileChange} accept="*" />
                         </label>
                     </div>
                     {newImageFiles.length > 0 && (
@@ -341,10 +342,10 @@ function EditViolationPageContent({ violationId }: { violationId: string }) {
   );
 }
 
-export default function EditViolationPage({ params }: { params: { id: string } }) {
+export default function EditViolationPage({ params: { id } }: { params: { id: string } }) {
     return (
         <PageGuard feature={PERMISSIONS.VIOLATIONS} requiredPermission="write">
-            <EditViolationPageContent violationId={params.id} />
+            <EditViolationPageContent violationId={id} />
         </PageGuard>
     )
 }

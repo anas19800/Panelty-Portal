@@ -22,7 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from '@/lib/utils';
 import { Branch, ViolationCategory } from '@/lib/mock-data';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, addDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PageGuard } from '@/context/auth-context';
 import { PERMISSIONS } from '@/lib/permissions';
@@ -139,6 +139,9 @@ function NewViolationPageContent() {
 
   async function onSubmit(data: ViolationFormValues) {
     setIsSubmitting(true);
+    const newViolationRef = doc(collection(db, 'violations'));
+    const violationId = newViolationRef.id;
+
     try {
         const branch = allBranches.find(b => b.id === data.branchId);
         if (!branch) throw new Error("Branch not found");
@@ -149,12 +152,11 @@ function NewViolationPageContent() {
         let imageUrls: string[] = [];
         if (imageFiles.length > 0) {
             const storage = getStorage();
-            for (const file of imageFiles) {
-                const storageRef = ref(storage, `violations/${data.violationNumber}-${Date.now()}/${file.name}`);
-                const snapshot = await uploadBytes(storageRef, file);
-                const downloadURL = await getDownloadURL(snapshot.ref);
-                imageUrls.push(downloadURL);
-            }
+            const uploadPromises = imageFiles.map(file => {
+                const storageRef = ref(storage, `violations/${violationId}/${Date.now()}-${file.name}`);
+                return uploadBytes(storageRef, file).then(snapshot => getDownloadURL(snapshot.ref));
+            });
+            imageUrls = await Promise.all(uploadPromises);
         }
 
         const newViolationData = {
@@ -174,7 +176,7 @@ function NewViolationPageContent() {
             imageUrls: imageUrls,
         };
         
-        await addDoc(collection(db, "violations"), newViolationData);
+        await setDoc(newViolationRef, newViolationData);
         
         toast({ title: "نجاح", description: "تم حفظ المخالفة بنجاح." });
         router.push('/violations');
@@ -241,7 +243,7 @@ function NewViolationPageContent() {
                         <p className="mb-2 text-sm text-muted-foreground"><span className="font-semibold">انقر للرفع</span> أو اسحب وأفلت</p>
                         <p className="text-xs text-muted-foreground">الحد الأقصى 10 ميجابايت لكل ملف</p>
                       </div>
-                      <Input id="dropzone-file" type="file" className="hidden" multiple onChange={handleFileChange} />
+                      <Input id="dropzone-file" type="file" className="hidden" multiple onChange={handleFileChange} accept="*" />
                     </label>
                   </div>
                   {imageFiles.length > 0 && (
