@@ -141,9 +141,9 @@ export default function ViolationsPage() {
                     <TableCell>{violation.date}</TableCell>
                     <TableCell>{violation.lastObjectionDate || '—'}</TableCell>
                     <TableCell>
-                      {violation.amount.toLocaleString(i18n.language === 'ar' ? 'ar-SA' : 'en-US', {
+                      {violation.amount.toLocaleString(t('app.locale'), {
                         style: 'currency',
-                        currency: 'SAR',
+                        currency: t('app.currencyCode'),
                       })}
                     </TableCell>
                     <TableCell>

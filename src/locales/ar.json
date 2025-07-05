@@ -1,7 +1,10 @@
 {
   "app": {
     "title": "متتبع امتثال الفروع",
-    "description": "منصة لمراقبة وتتبع مخالفات البلدية."
+    "description": "منصة لمراقبة وتتبع مخالفات البلدية.",
+    "locale": "ar-SA",
+    "currency": "ر.س",
+    "currencyCode": "SAR"
   },
   "nav": {
     "dashboard": "لوحة المعلومات",
@@ -37,7 +40,8 @@
     "brand": "البراند",
     "branch": "الفرع",
     "manager": "المدير",
-    "regionalManager": "المدير الإقليمي"
+    "regionalManager": "المدير الإقليمي",
+    "none": "لا يوجد"
   },
   "dashboard": {
     "title": "لوحة المعلومات",

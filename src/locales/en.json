@@ -1,7 +1,10 @@
 {
   "app": {
     "title": "Branch Compliance Tracker",
-    "description": "Platform for monitoring and tracking municipal violations."
+    "description": "Platform for monitoring and tracking municipal violations.",
+    "locale": "en-US",
+    "currency": "SAR",
+    "currencyCode": "SAR"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -37,7 +40,8 @@
     "brand": "Brand",
     "branch": "Branch",
     "manager": "Manager",
-    "regionalManager": "Regional Manager"
+    "regionalManager": "Regional Manager",
+    "none": "None"
   },
   "dashboard": {
     "title": "Dashboard",

@@ -336,7 +336,10 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {dashboardStats.totalFines.toLocaleString(t('app.locale'))} <span className="text-sm">{t('app.currency')}</span>
+              {dashboardStats.totalFines.toLocaleString(t('app.locale'), {
+                style: 'currency',
+                currency: t('app.currencyCode'),
+              })}
             </div>
             <p className="text-xs text-muted-foreground">{t('dashboard.totalFinesDesc')}</p>
           </CardContent>
@@ -388,7 +391,7 @@ export default function Dashboard() {
                   <TableCell>
                     {violation.amount.toLocaleString(t('app.locale'), {
                       style: 'currency',
-                      currency: 'SAR',
+                      currency: t('app.currencyCode'),
                     })}
                   </TableCell>
                   <TableCell>
