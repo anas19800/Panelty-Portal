@@ -57,7 +57,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { authUser, user, loading } = useAuth();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
@@ -91,11 +91,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
+  const side = i18n.dir() === 'rtl' ? 'right' : 'left';
+
   return (
     <SidebarProvider>
       <Sidebar
-        side="left"
-        className="border-r"
+        side={side}
         collapsible="icon"
       >
         <SidebarHeader className="p-4">
@@ -117,7 +118,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   isActive={pathname.startsWith(item.href) && (item.href !== '/' || pathname === '/')}
                   tooltip={{
                     children: t(item.labelKey),
-                    side: 'right',
+                    side: side === 'left' ? 'right' : 'left',
                   }}
                 >
                   <Link href={item.href}>

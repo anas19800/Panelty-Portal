@@ -203,7 +203,7 @@ const Sidebar = React.forwardRef<
           <SheetContent
             data-sidebar="sidebar"
             data-mobile="true"
-            className="w-[--sidebar-width] bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden"
+            className="w-[--sidebar-width] bg-sidebar p-0 text-sidebar-foreground"
             style={
               {
                 "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
@@ -224,7 +224,7 @@ const Sidebar = React.forwardRef<
     return (
       <div
         ref={ref}
-        className="group peer hidden md:block text-sidebar-foreground"
+        className="group peer hidden text-sidebar-foreground md:block"
         data-state={state}
         data-collapsible={state === "collapsed" ? collapsible : ""}
         data-variant={variant}
@@ -232,8 +232,8 @@ const Sidebar = React.forwardRef<
       >
         <div
           className={cn(
-            "duration-200 fixed inset-y-0 z-10 hidden h-svh w-[--sidebar-width] transition-[left,right,width] ease-linear md:flex",
-            "left-0",
+            "fixed inset-y-0 z-10 hidden h-svh w-[--sidebar-width] transition-[left,right,width] duration-200 ease-linear md:flex",
+            "group-data-[side=left]:left-0 group-data-[side=right]:right-0",
             // Adjust the padding for floating and inset variants.
             variant === "floating" || variant === "inset"
               ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4)_+2px)]"
@@ -319,7 +319,8 @@ const SidebarInset = React.forwardRef<
       ref={ref}
       className={cn(
         "relative flex min-h-svh flex-1 flex-col bg-background transition-[margin] duration-200 ease-linear",
-        "md:ms-[var(--sidebar-width)] peer-data-[state=collapsed]:md:ms-[var(--sidebar-width-icon)]",
+        "peer-data-[side=left]:md:ml-[var(--sidebar-width)] peer-data-[side=right]:md:mr-[var(--sidebar-width)]",
+        "peer-data-[state=collapsed]:peer-data-[side=left]:md:ml-[var(--sidebar-width-icon)] peer-data-[state=collapsed]:peer-data-[side=right]:md:mr-[var(--sidebar-width-icon)]",
         className
       )}
       {...props}
