@@ -181,14 +181,17 @@ function EditViolationPageContent({ violationId }: { violationId: string }) {
         const category = categories.find(c => c.mainCategoryCode === data.category);
         const subCategory = category?.subCategories.find(sc => sc.code === data.subCategory);
 
-        const storage = getStorage();
-        const newUrlsPromises = newImageFiles.map(file => {
-            const storageRef = ref(storage, `violations/${violationId}/${Date.now()}-${file.name}`);
-            return uploadBytes(storageRef, file)
-                .then(snapshot => getDownloadURL(snapshot.ref));
-        });
-
-        const newlyUploadedUrls = await Promise.all(newUrlsPromises);
+        const newlyUploadedUrls: string[] = [];
+        if (newImageFiles.length > 0) {
+            const storage = getStorage();
+            for (const file of newImageFiles) {
+                const storageRef = ref(storage, `violations/${violationId}/${Date.now()}-${file.name}`);
+                const snapshot = await uploadBytes(storageRef, file);
+                const downloadUrl = await getDownloadURL(snapshot.ref);
+                newlyUploadedUrls.push(downloadUrl);
+            }
+        }
+        
         const uploadedImageUrls = [...existingImageUrls, ...newlyUploadedUrls];
 
         const updatedViolationData = {

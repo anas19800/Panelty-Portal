@@ -149,14 +149,15 @@ function NewViolationPageContent() {
         const category = categories.find(c => c.mainCategoryCode === data.category);
         const subCategory = category?.subCategories.find(sc => sc.code === data.subCategory);
 
-        let imageUrls: string[] = [];
+        const imageUrls: string[] = [];
         if (imageFiles.length > 0) {
             const storage = getStorage();
-            const uploadPromises = imageFiles.map(file => {
+            for (const file of imageFiles) {
                 const storageRef = ref(storage, `violations/${violationId}/${Date.now()}-${file.name}`);
-                return uploadBytes(storageRef, file).then(snapshot => getDownloadURL(snapshot.ref));
-            });
-            imageUrls = await Promise.all(uploadPromises);
+                const snapshot = await uploadBytes(storageRef, file);
+                const downloadUrl = await getDownloadURL(snapshot.ref);
+                imageUrls.push(downloadUrl);
+            }
         }
 
         const newViolationData = {

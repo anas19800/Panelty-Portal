@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { format } from 'date-fns';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
@@ -23,7 +24,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Objection, Violation, Attachment } from '@/lib/mock-data';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, doc, addDoc, updateDoc, deleteDoc, serverTimestamp, query, where, writeBatch } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, serverTimestamp, query, where, writeBatch } from 'firebase/firestore';
 import { useAuth } from '@/context/auth-context';
 import { getPermission, PERMISSIONS, ROLES } from '@/lib/permissions';
 import { cn } from '@/lib/utils';
@@ -50,6 +51,7 @@ export default function ObjectionsPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [objectionToDelete, setObjectionToDelete] = useState<Objection | null>(null);
   const [attachments, setAttachments] = useState<File[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const permission = getPermission(user?.role, PERMISSIONS.OBJECTIONS);
   const canWrite = permission === 'write';
@@ -128,17 +130,33 @@ export default function ObjectionsPage() {
   };
 
   const onSubmit = async (values: ObjectionFormValues) => {
+    setIsSubmitting(true);
     const violation = violations.find(v => v.id === values.violationId);
     if (!violation) {
         toast({ variant: 'destructive', description: 'المخالفة المحددة غير موجودة.' });
+        setIsSubmitting(false);
         return;
     }
     
-    // NOTE: File upload to Firebase Storage would be implemented here in a real app.
-    // For this prototype, we'll just save the file names.
-    const attachmentData: Attachment[] = attachments.map(file => ({ name: file.name, type: file.type }));
+    const newObjectionRef = doc(collection(db, 'objections'));
+    const objectionId = newObjectionRef.id;
 
     try {
+        let attachmentData: Attachment[] = [];
+        if (attachments.length > 0) {
+            const storage = getStorage();
+            for (const file of attachments) {
+                const storageRef = ref(storage, `objections/${objectionId}/${Date.now()}-${file.name}`);
+                const snapshot = await uploadBytes(storageRef, file);
+                const downloadUrl = await getDownloadURL(snapshot.ref);
+                attachmentData.push({
+                    name: file.name,
+                    type: file.type,
+                    url: downloadUrl
+                });
+            }
+        }
+
         const newObjectionData = {
             number: values.number,
             violationId: violation.id,
@@ -151,16 +169,22 @@ export default function ObjectionsPage() {
             createdAt: serverTimestamp(),
         };
 
-        const docRef = await addDoc(collection(db, 'objections'), newObjectionData);
+        await setDoc(newObjectionRef, newObjectionData);
         
-        // Refetch to update list correctly
-        const newDoc = { ...newObjectionData, id: docRef.id, branchId: violation.branchId, region: violation.region };
+        const newDocData = {
+          ...newObjectionData,
+          createdAt: new Date() // Use client-side date for immediate state update
+        };
+
+        const newDoc = { ...newDocData, id: objectionId, branchId: violation.branchId, region: violation.region } as unknown as Objection;
         setObjections([ newDoc, ...objections ]);
         toast({ description: 'تم تسجيل الاعتراض بنجاح.' });
         handleCloseDialog();
     } catch (error) {
         console.error("Error saving objection:", error);
         toast({ variant: 'destructive', description: 'فشل في حفظ الاعتراض.' });
+    } finally {
+        setIsSubmitting(false);
     }
   };
 
@@ -197,7 +221,6 @@ export default function ObjectionsPage() {
         const objectionRef = doc(db, 'objections', objectionId);
         batch.update(objectionRef, { status: status });
 
-        // If the objection is accepted, update the violation status to 'ملفية' (Filed/Cancelled)
         if (status === 'مقبول') {
             const violationRef = doc(db, 'violations', objection.violationId);
             batch.update(violationRef, { status: 'ملفية' });
@@ -324,7 +347,7 @@ export default function ObjectionsPage() {
         </Card>
       </div>
 
-       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+       <Dialog open={dialogOpen} onOpenChange={handleCloseDialog}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>تسجيل اعتراض جديد</DialogTitle>
@@ -380,7 +403,7 @@ export default function ObjectionsPage() {
                                 <p className="mb-2 text-sm text-muted-foreground"><span className="font-semibold">انقر للرفع</span> أو اسحب وأفلت</p>
                                 <p className="text-xs text-muted-foreground">الحد الأقصى 10 ميجابايت لكل ملف</p>
                             </div>
-                            <Input id="dropzone-file" type="file" className="hidden" multiple onChange={handleFileChange} />
+                            <Input id="dropzone-file" type="file" className="hidden" multiple onChange={handleFileChange} accept="*" />
                         </label>
                     </div>
                      {attachments.length > 0 && (
@@ -396,7 +419,7 @@ export default function ObjectionsPage() {
                 </div>
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={handleCloseDialog}>إلغاء</Button>
-                <Button type="submit">حفظ الاعتراض</Button>
+                <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'جاري الحفظ...' : 'حفظ الاعتراض'}</Button>
               </DialogFooter>
             </form>
           </Form>
