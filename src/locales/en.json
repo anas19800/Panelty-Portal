@@ -229,6 +229,10 @@
         "rejected": "Rejected"
     },
     "toasts": {
+        "numberRequired": "Number is required.",
+        "dateRequired": "Date is required.",
+        "violationRequired": "Violation is required.",
+        "detailsRequired": "Details must be at least 10 characters long.",
         "loadError": "Failed to load data from the database.",
         "violationNotFound": "The selected violation does not exist.",
         "saveSuccess": "Objection registered successfully.",
@@ -276,6 +280,9 @@
       "description": "User \"{userName}\" will be permanently deleted. This action cannot be undone."
     },
     "toasts": {
+      "nameRequired": "Name is required.",
+      "invalidEmail": "Invalid email address.",
+      "roleRequired": "Please select a role.",
       "loadError": "Failed to load data.",
       "deleteSuccess": "User deleted successfully.",
       "deleteError": "Failed to delete user.",

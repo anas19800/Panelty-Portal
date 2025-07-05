@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { format } from 'date-fns';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { useTranslation } from 'react-i18next';
 
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
@@ -29,14 +30,12 @@ import { useAuth } from '@/context/auth-context';
 import { getPermission, PERMISSIONS, ROLES } from '@/lib/permissions';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { objectionStatusMap } from '@/lib/i18n';
 
 const objectionSchema = z.object({
-  number: z.string().min(1, 'الرجاء إدخال رقم الاعتراض.'),
-  date: z.date({ required_error: 'الرجاء تحديد تاريخ الاعتراض.' }),
-  violationId: z.string({ required_error: 'الرجاء اختيار مخالفة.' }),
-  details: z.string().min(10, 'الرجاء كتابة تفاصيل الاعتراض (10 أحرف على الأقل).'),
+  number: z.string().min(1, 'Number is required.'),
+  date: z.date({ required_error: 'Date is required.' }),
+  violationId: z.string({ required_error: 'Violation is required.' }),
+  details: z.string().min(10, 'Details must be at least 10 characters.'),
 });
 
 type ObjectionFormValues = z.infer<typeof objectionSchema>;
@@ -44,6 +43,7 @@ type ObjectionFormValues = z.infer<typeof objectionSchema>;
 export default function ObjectionsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [isLoaded, setIsLoaded] = useState(false);
   const [objections, setObjections] = useState<Objection[]>([]);
   const [violations, setViolations] = useState<Violation[]>([]);
@@ -81,13 +81,13 @@ export default function ObjectionsPage() {
 
         } catch (error) {
             console.error('Failed to load data from Firestore', error);
-            toast({ variant: 'destructive', description: 'فشل تحميل البيانات من قاعدة البيانات.' });
+            toast({ variant: 'destructive', description: t('objections.toasts.loadError') });
         } finally {
             setIsLoaded(true);
         }
     }
     fetchData();
-  }, [toast]);
+  }, [toast, t]);
   
   const filteredObjections = useMemo(() => {
     if (!user) return [];
@@ -102,8 +102,17 @@ export default function ObjectionsPage() {
     return objections;
   }, [objections, user, permission]);
 
+  const translatedObjectionSchema = useMemo(() => {
+    return z.object({
+      number: z.string().min(1, t('objections.toasts.numberRequired')),
+      date: z.date({ required_error: t('objections.toasts.dateRequired') }),
+      violationId: z.string({ required_error: t('objections.toasts.violationRequired') }),
+      details: z.string().min(10, t('objections.toasts.detailsRequired')),
+    });
+  }, [t]);
+
   const form = useForm<ObjectionFormValues>({
-    resolver: zodResolver(objectionSchema),
+    resolver: zodResolver(translatedObjectionSchema),
   });
   
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -116,8 +125,8 @@ export default function ObjectionsPage() {
       if (oversizedFiles.length > 0) {
         toast({
           variant: 'destructive',
-          title: 'ملفات كبيرة الحجم',
-          description: `تم تجاهل ${oversizedFiles.length} ملف لأن حجمها يتجاوز 10 ميجابايت.`,
+          title: t('objections.toasts.fileSizeErrorTitle'),
+          description: t('objections.toasts.fileSizeErrorDesc', { count: oversizedFiles.length }),
         });
       }
       setAttachments(validFiles);
@@ -134,7 +143,7 @@ export default function ObjectionsPage() {
     setIsSubmitting(true);
     const violation = violations.find(v => v.id === values.violationId);
     if (!violation) {
-        toast({ variant: 'destructive', description: 'المخالفة المحددة غير موجودة.' });
+        toast({ variant: 'destructive', description: t('objections.toasts.violationNotFound') });
         setIsSubmitting(false);
         return;
     }
@@ -169,16 +178,16 @@ export default function ObjectionsPage() {
         
         const newDocData = {
           ...newObjectionData,
-          createdAt: new Date() // Use client-side date for immediate state update
+          createdAt: new Date()
         };
 
         const newDoc = { ...newDocData, id: objectionId, branchId: violation.branchId, region: violation.region } as unknown as Objection;
         setObjections([ newDoc, ...objections ]);
-        toast({ description: 'تم تسجيل الاعتراض بنجاح.' });
+        toast({ description: t('objections.toasts.saveSuccess') });
         handleCloseDialog();
     } catch (error) {
         console.error("Error saving objection:", error);
-        toast({ variant: 'destructive', description: 'فشل في حفظ الاعتراض.' });
+        toast({ variant: 'destructive', description: t('objections.toasts.saveError') });
     } finally {
         setIsSubmitting(false);
     }
@@ -194,10 +203,10 @@ export default function ObjectionsPage() {
         try {
             await deleteDoc(doc(db, "objections", objectionToDelete.id));
             setObjections(objections.filter(o => o.id !== objectionToDelete.id));
-            toast({ description: 'تم حذف الاعتراض بنجاح.' });
+            toast({ description: t('objections.toasts.deleteSuccess') });
         } catch (error) {
             console.error("Error deleting objection: ", error);
-            toast({ variant: 'destructive', description: 'فشل في حذف الاعتراض.' });
+            toast({ variant: 'destructive', description: t('objections.toasts.deleteError') });
         } finally {
             setDeleteDialogOpen(false);
             setObjectionToDelete(null);
@@ -208,7 +217,7 @@ export default function ObjectionsPage() {
   const handleStatusChange = async (objectionId: string, status: Objection['status']) => {
     const objection = objections.find(o => o.id === objectionId);
     if (!objection) {
-        toast({ variant: 'destructive', description: 'لم يتم العثور على الاعتراض.' });
+        toast({ variant: 'destructive', description: t('objections.toasts.violationNotFound') });
         return;
     }
 
@@ -227,20 +236,20 @@ export default function ObjectionsPage() {
         setObjections(objections.map(o => o.id === objectionId ? { ...o, status } : o));
         
         if (status === 'approved') {
-            toast({ description: 'تم قبول الاعتراض وتحديث حالة المخالفة إلى "ملفية".' });
+            toast({ description: t('objections.toasts.statusApproved') });
         } else {
-            toast({ description: `تم تغيير حالة الاعتراض إلى "${objectionStatusMap[status]}".`});
+            toast({ description: t('objections.toasts.statusChanged', { status: t(`objectionStatuses.${status}`) })});
         }
     } catch (error) {
         console.error("Error updating status: ", error);
-        toast({ variant: 'destructive', description: 'فشل في تحديث الحالة.' });
+        toast({ variant: 'destructive', description: t('objections.toasts.statusUpdateError') });
     }
   };
 
   if (!isLoaded) {
     return (
        <div className="flex flex-col gap-6">
-        <PageHeader title="متابعة الاعتراضات" />
+        <PageHeader title={t('objections.title')} />
         <Card>
           <CardHeader>
             <Skeleton className="h-8 w-48" />
@@ -258,32 +267,30 @@ export default function ObjectionsPage() {
   return (
     <>
       <div className="flex flex-col gap-6">
-        <PageHeader title="متابعة الاعتراضات">
+        <PageHeader title={t('objections.title')}>
           {canWrite && (
             <Button onClick={() => setDialogOpen(true)}>
                 <PlusCircle className="mr-2 h-4 w-4" />
-                تسجيل اعتراض جديد
+                {t('objections.addNew')}
             </Button>
           )}
         </PageHeader>
         <Card>
           <CardHeader>
-            <CardTitle>قائمة الاعتراضات</CardTitle>
-            <CardDescription>
-              عرض وتتبع جميع الاعتراضات المقدمة على المخالفات.
-            </CardDescription>
+            <CardTitle>{t('objections.listTitle')}</CardTitle>
+            <CardDescription>{t('objections.listDescription')}</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>رقم الاعتراض</TableHead>
-                  <TableHead>رقم المخالفة</TableHead>
-                  <TableHead>الفرع</TableHead>
-                  <TableHead>تاريخ الاعتراض</TableHead>
-                  <TableHead>المرفقات</TableHead>
-                  <TableHead>الحالة</TableHead>
-                  {canWrite && <TableHead><span className="sr-only">Actions</span></TableHead>}
+                  <TableHead>{t('objections.table.number')}</TableHead>
+                  <TableHead>{t('objections.table.violationNumber')}</TableHead>
+                  <TableHead>{t('objections.table.branch')}</TableHead>
+                  <TableHead>{t('objections.table.date')}</TableHead>
+                  <TableHead>{t('objections.table.attachments')}</TableHead>
+                  <TableHead>{t('objections.table.status')}</TableHead>
+                  {canWrite && <TableHead><span className="sr-only">{t('nav.actions')}</span></TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -313,7 +320,7 @@ export default function ObjectionsPage() {
                             : 'secondary'
                         }
                       >
-                        {objectionStatusMap[objection.status] || objection.status}
+                        {t(`objectionStatuses.${objection.status}`)}
                       </Badge>
                     </TableCell>
                     {canWrite && (
@@ -326,11 +333,11 @@ export default function ObjectionsPage() {
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
-                                    <DropdownMenuLabel>تغيير الحالة</DropdownMenuLabel>
-                                    <DropdownMenuItem onClick={() => handleStatusChange(objection.id, 'pending')}>قيد المراجعة</DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => handleStatusChange(objection.id, 'approved')}>مقبول</DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => handleStatusChange(objection.id, 'rejected')}>مرفوض</DropdownMenuItem>
-                                    <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleDeleteClick(objection)}>حذف</DropdownMenuItem>
+                                    <DropdownMenuLabel>{t('objections.statusMenu.changeStatus')}</DropdownMenuLabel>
+                                    <DropdownMenuItem onClick={() => handleStatusChange(objection.id, 'pending')}>{t('objectionStatuses.pending')}</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleStatusChange(objection.id, 'approved')}>{t('objectionStatuses.approved')}</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleStatusChange(objection.id, 'rejected')}>{t('objectionStatuses.rejected')}</DropdownMenuItem>
+                                    <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleDeleteClick(objection)}>{t('common.delete')}</DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
                         </TableCell>
@@ -346,27 +353,25 @@ export default function ObjectionsPage() {
        <Dialog open={dialogOpen} onOpenChange={handleCloseDialog}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>تسجيل اعتراض جديد</DialogTitle>
-            <DialogDescription>
-              أدخل بيانات الاعتراض والمخالفة المرتبطة به.
-            </DialogDescription>
+            <DialogTitle>{t('objections.dialog.title')}</DialogTitle>
+            <DialogDescription>{t('objections.dialog.description')}</DialogDescription>
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
                 <div className="grid grid-cols-2 gap-4">
-                  <FormField control={form.control} name="number" render={({ field }) => (<FormItem><FormLabel>رقم الاعتراض</FormLabel><FormControl><Input placeholder="أدخل رقم الاعتراض" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                  <FormField control={form.control} name="date" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>تاريخ الاعتراض</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full justify-start text-right font-normal", !field.value && "text-muted-foreground")}><CalendarIcon className="ml-2 h-4 w-4" />{field.value ? format(field.value, "PPP") : <span>اختر تاريخ</span>}</Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)} />
+                  <FormField control={form.control} name="number" render={({ field }) => (<FormItem><FormLabel>{t('objections.dialog.number')}</FormLabel><FormControl><Input placeholder={t('objections.dialog.numberPlaceholder')} {...field} /></FormControl><FormMessage /></FormItem>)} />
+                  <FormField control={form.control} name="date" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>{t('objections.dialog.date')}</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full justify-start text-right font-normal", !field.value && "text-muted-foreground")}><CalendarIcon className="ml-2 h-4 w-4" />{field.value ? format(field.value, "PPP") : <span>{t('objections.dialog.selectDate')}</span>}</Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)} />
                 </div>
                 <FormField
                   control={form.control}
                   name="violationId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>المخالفة</FormLabel>
+                      <FormLabel>{t('objections.dialog.violation')}</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="اختر رقم المخالفة..." />
+                            <SelectValue placeholder={t('objections.dialog.selectViolation')} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -382,29 +387,29 @@ export default function ObjectionsPage() {
                   name="details"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>تفاصيل الاعتراض</FormLabel>
+                      <FormLabel>{t('objections.dialog.details')}</FormLabel>
                       <FormControl>
-                        <Textarea placeholder="اشرح أسباب اعتراضك هنا..." {...field} rows={5} />
+                        <Textarea placeholder={t('objections.dialog.detailsPlaceholder')} {...field} rows={5} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
                 <div className="space-y-2">
-                    <FormLabel>المرفقات (اختياري)</FormLabel>
+                    <FormLabel>{t('objections.dialog.attachments')}</FormLabel>
                      <div className="flex items-center justify-center w-full">
                         <label htmlFor="dropzone-file" className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted">
                             <div className="flex flex-col items-center justify-center pt-5 pb-6">
                                 <Upload className="w-8 h-8 mb-4 text-muted-foreground" />
-                                <p className="mb-2 text-sm text-muted-foreground"><span className="font-semibold">انقر للرفع</span> أو اسحب وأفلت</p>
-                                <p className="text-xs text-muted-foreground">الحد الأقصى 10 ميجابايت لكل ملف</p>
+                                <p className="mb-2 text-sm text-muted-foreground"><span className="font-semibold">{t('objections.dialog.dropzoneHint')}</span></p>
+                                <p className="text-xs text-muted-foreground">{t('objections.dialog.dropzoneMeta')}</p>
                             </div>
                             <Input id="dropzone-file" type="file" className="hidden" multiple onChange={handleFileChange} accept="*" />
                         </label>
                     </div>
                      {attachments.length > 0 && (
                         <div className="space-y-1 pt-2 text-sm text-muted-foreground">
-                            <p className="font-medium text-foreground">الملفات المختارة:</p>
+                            <p className="font-medium text-foreground">{t('objections.dialog.selectedFiles')}</p>
                             <ul className="list-disc list-inside">
                                 {attachments.map((file, index) => (
                                     <li key={index}>{file.name}</li>
@@ -414,8 +419,8 @@ export default function ObjectionsPage() {
                     )}
                 </div>
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={handleCloseDialog}>إلغاء</Button>
-                <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'جاري الحفظ...' : 'حفظ الاعتراض'}</Button>
+                <Button type="button" variant="outline" onClick={handleCloseDialog}>{t('common.cancel')}</Button>
+                <Button type="submit" disabled={isSubmitting}>{isSubmitting ? t('common.saving') : t('common.save')}</Button>
               </DialogFooter>
             </form>
           </Form>
@@ -425,14 +430,14 @@ export default function ObjectionsPage() {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle>
+            <AlertDialogTitle>{t('common.areYouSure')}</AlertDialogTitle>
             <AlertDialogDescription>
-              سيتم حذف الاعتراض رقم "{objectionToDelete?.number}" نهائياً. لا يمكن التراجع عن هذا الإجراء.
+              {t('objections.deleteDialog.description', { objectionNumber: objectionToDelete?.number })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>إلغاء</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive hover:bg-destructive/90">حذف</AlertDialogAction>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive hover:bg-destructive/90">{t('common.delete')}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -23,12 +23,12 @@ import { db } from '@/lib/firebase';
 import { collection, getDocs, doc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { PageGuard } from '@/context/auth-context';
 import { PERMISSIONS, ROLES } from '@/lib/permissions';
-import { roleMap, userStatusMap } from '@/lib/i18n';
+import { useTranslation } from 'react-i18next';
 
 const userSchema = z.object({
-  name: z.string().min(1, 'الاسم مطلوب.'),
-  email: z.string().email('البريد الإلكتروني غير صحيح.'),
-  role: z.nativeEnum(ROLES, { required_error: 'الرجاء اختيار دور.' }),
+  name: z.string().min(1, 'Name is required.'),
+  email: z.string().email('Invalid email.'),
+  role: z.nativeEnum(ROLES, { required_error: 'Role is required.' }),
   branchId: z.string().optional(),
   region: z.string().optional(),
 });
@@ -39,6 +39,7 @@ const roles = Object.values(ROLES);
 type DbRegion = { id: string; name: string; };
 
 function UsersPageContent() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [isLoaded, setIsLoaded] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
@@ -66,16 +67,26 @@ function UsersPageContent() {
 
       } catch (error) {
         console.error('Failed to load data from Firestore', error);
-        toast({ variant: 'destructive', description: 'فشل في تحميل البيانات.' });
+        toast({ variant: 'destructive', description: t('users.toasts.loadError') });
       } finally {
         setIsLoaded(true);
       }
     }
     fetchData();
-  }, [toast]);
+  }, [toast, t]);
+
+  const translatedUserSchema = useMemo(() => {
+    return z.object({
+      name: z.string().min(1, t('users.toasts.nameRequired')),
+      email: z.string().email(t('users.toasts.invalidEmail')),
+      role: z.nativeEnum(ROLES, { required_error: t('users.toasts.roleRequired') }),
+      branchId: z.string().optional(),
+      region: z.string().optional(),
+    });
+  }, [t]);
 
   const form = useForm<UserFormValues>({
-    resolver: zodResolver(userSchema),
+    resolver: zodResolver(translatedUserSchema),
     defaultValues: { name: '', email: '', role: undefined, branchId: '', region: '' },
   });
 
@@ -100,9 +111,9 @@ function UsersPageContent() {
       try {
         await deleteDoc(doc(db, "users", userToDelete.id));
         setUsers(users.filter((u) => u.id !== userToDelete.id));
-        toast({ description: 'تم حذف المستخدم بنجاح.' });
+        toast({ description: t('users.toasts.deleteSuccess') });
       } catch (error) {
-        toast({ variant: 'destructive', description: 'فشل في حذف المستخدم.' });
+        toast({ variant: 'destructive', description: t('users.toasts.deleteError') });
       } finally {
         setDeleteDialogOpen(false);
         setUserToDelete(null);
@@ -116,16 +127,13 @@ function UsersPageContent() {
         const userRef = doc(db, "users", user.id);
         await updateDoc(userRef, { status: newStatus });
         setUsers(users.map(u => u.id === user.id ? { ...u, status: newStatus } : u));
-        toast({ description: `تم تغيير حالة المستخدم ${user.name}.` });
+        toast({ description: t('users.toasts.statusToggleSuccess', { userName: user.name }) });
     } catch (error) {
-        toast({ variant: 'destructive', description: 'فشل في تغيير حالة المستخدم.' });
+        toast({ variant: 'destructive', description: t('users.toasts.statusToggleError') });
     }
   };
 
   const onSubmit = async (values: UserFormValues) => {
-    // NOTE: This only adds a user to the Firestore 'users' collection.
-    // It does NOT create an authentication user that can log in.
-    // That requires Firebase Admin SDK on a backend.
     try {
       const branch = branches.find(b => b.id === values.branchId);
       const dataToSave: Partial<User> = {
@@ -138,24 +146,23 @@ function UsersPageContent() {
         const userRef = doc(db, "users", editingUser.id);
         await updateDoc(userRef, dataToSave);
         setUsers(users.map((u) => u.id === editingUser.id ? { ...u, ...dataToSave } : u));
-        toast({ description: 'تم تعديل بيانات المستخدم بنجاح.' });
+        toast({ description: t('users.toasts.updateSuccess') });
       } else {
         const newUserDoc = { ...dataToSave, status: 'active' as const };
-        // This is not a real auth user, so an admin would need to create credentials separately
         const docRef = await addDoc(collection(db, "users"), newUserDoc);
         setUsers([...users, { ...newUserDoc, id: docRef.id } as User]);
-        toast({ description: 'تمت إضافة المستخدم بنجاح. يجب إنشاء بيانات دخوله بشكل منفصل.' });
+        toast({ description: t('users.toasts.addSuccess') });
       }
       setDialogOpen(false);
     } catch (error) {
-      toast({ variant: 'destructive', description: 'فشل في حفظ بيانات المستخدم.' });
+      toast({ variant: 'destructive', description: t('users.toasts.saveError') });
     }
   };
 
   if (!isLoaded) {
     return (
       <div className="flex flex-col gap-6">
-        <PageHeader title="إدارة المستخدمين والصلاحيات" />
+        <PageHeader title={t('users.title')} />
         <Card><CardHeader><Skeleton className="h-8 w-48" /><Skeleton className="h-4 w-72" /></CardHeader><CardContent><Skeleton className="h-10 w-full" /><Skeleton className="h-40 w-full" /></CardContent></Card>
       </div>
     );
@@ -164,29 +171,29 @@ function UsersPageContent() {
   return (
     <>
       <div className="flex flex-col gap-6">
-        <PageHeader title="إدارة المستخدمين والصلاحيات">
-          <Button onClick={handleAddNew}><PlusCircle className="mr-2 h-4 w-4" /> إضافة مستخدم</Button>
+        <PageHeader title={t('users.title')}>
+          <Button onClick={handleAddNew}><PlusCircle className="mr-2 h-4 w-4" /> {t('users.addNew')}</Button>
         </PageHeader>
         <Card>
-          <CardHeader><CardTitle>قائمة المستخدمين</CardTitle><CardDescription>إدارة حسابات المستخدمين والتحكم في صلاحياتهم.</CardDescription></CardHeader>
+          <CardHeader><CardTitle>{t('users.listTitle')}</CardTitle><CardDescription>{t('users.listDescription')}</CardDescription></CardHeader>
           <CardContent>
             <Table>
-              <TableHeader><TableRow><TableHead>الاسم</TableHead><TableHead>البريد الإلكتروني</TableHead><TableHead>الدور</TableHead><TableHead>الحالة</TableHead><TableHead><span className="sr-only">Actions</span></TableHead></TableRow></TableHeader>
+              <TableHeader><TableRow><TableHead>{t('users.table.name')}</TableHead><TableHead>{t('users.table.email')}</TableHead><TableHead>{t('users.table.role')}</TableHead><TableHead>{t('users.table.status')}</TableHead><TableHead><span className="sr-only">{t('nav.actions')}</span></TableHead></TableRow></TableHeader>
               <TableBody>
                 {users.map((user) => (
                   <TableRow key={user.id}>
                     <TableCell className="font-medium">{user.name}</TableCell>
                     <TableCell>{user.email}</TableCell>
-                    <TableCell>{roleMap[user.role]}{user.role === ROLES.BRANCH_MANAGER && user.branchName ? ` (${user.branchName})` : ''}{user.role === ROLES.REGIONAL_MANAGER && user.region ? ` (${user.region})` : ''}</TableCell>
-                    <TableCell><Badge variant={user.status === 'active' ? 'default' : 'outline'}>{userStatusMap[user.status]}</Badge></TableCell>
+                    <TableCell>{t(`roles.${user.role}` as const, user.role)}{user.role === ROLES.BRANCH_MANAGER && user.branchName ? ` (${user.branchName})` : ''}{user.role === ROLES.REGIONAL_MANAGER && user.region ? ` (${user.region})` : ''}</TableCell>
+                    <TableCell><Badge variant={user.status === 'active' ? 'default' : 'outline'}>{t(`userStatuses.${user.status}` as const, user.status)}</Badge></TableCell>
                     <TableCell>
                        <DropdownMenu>
                         <DropdownMenuTrigger asChild><Button aria-haspopup="true" size="icon" variant="ghost"><MoreHorizontal className="h-4 w-4" /><span className="sr-only">Toggle menu</span></Button></DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>إجراءات</DropdownMenuLabel>
-                          <DropdownMenuItem onClick={() => handleEdit(user)}>تعديل</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleToggleStatus(user)}>{user.status === 'active' ? 'تعطيل المستخدم' : 'تفعيل المستخدم'}</DropdownMenuItem>
-                          <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleDeleteClick(user)}><Trash2 className="ml-2 h-4 w-4" />حذف</DropdownMenuItem>
+                          <DropdownMenuLabel>{t('nav.actions')}</DropdownMenuLabel>
+                          <DropdownMenuItem onClick={() => handleEdit(user)}>{t('common.edit')}</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleToggleStatus(user)}>{user.status === 'active' ? t('users.actions.toggleInactive') : t('users.actions.toggleActive')}</DropdownMenuItem>
+                          <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleDeleteClick(user)}><Trash2 className="ml-2 h-4 w-4" />{t('common.delete')}</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
@@ -199,28 +206,28 @@ function UsersPageContent() {
       </div>
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-md">
-          <DialogHeader><DialogTitle>{editingUser ? 'تعديل بيانات المستخدم' : 'إضافة مستخدم جديد'}</DialogTitle><DialogDescription>أدخل تفاصيل المستخدم والصلاحيات الممنوحة له.</DialogDescription></DialogHeader>
+          <DialogHeader><DialogTitle>{editingUser ? t('users.dialog.editTitle') : t('users.dialog.addTitle')}</DialogTitle><DialogDescription>{t('users.dialog.description')}</DialogDescription></DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-              <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>الاسم الكامل</FormLabel><FormControl><Input placeholder="مثال: عبدالله الصالح" {...field} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={form.control} name="email" render={({ field }) => (<FormItem><FormLabel>البريد الإلكتروني</FormLabel><FormControl><Input type="email" placeholder="user@example.com" {...field} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={form.control} name="role" render={({ field }) => (<FormItem><FormLabel>الدور</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="اختر دوراً للمستخدم" /></SelectTrigger></FormControl><SelectContent>{roles.map(r => <SelectItem key={r} value={r}>{roleMap[r]}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
+              <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>{t('users.dialog.name')}</FormLabel><FormControl><Input placeholder={t('users.dialog.namePlaceholder')} {...field} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={form.control} name="email" render={({ field }) => (<FormItem><FormLabel>{t('users.dialog.email')}</FormLabel><FormControl><Input type="email" placeholder={t('users.dialog.emailPlaceholder')} {...field} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={form.control} name="role" render={({ field }) => (<FormItem><FormLabel>{t('users.dialog.role')}</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder={t('users.dialog.selectRole')} /></SelectTrigger></FormControl><SelectContent>{roles.map(r => <SelectItem key={r} value={r}>{t(`roles.${r}` as const, r)}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
               {watchRole === ROLES.BRANCH_MANAGER && (
-                <FormField control={form.control} name="branchId" render={({ field }) => (<FormItem><FormLabel>الفرع</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="اختر فرعاً" /></SelectTrigger></FormControl><SelectContent>{branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="branchId" render={({ field }) => (<FormItem><FormLabel>{t('users.dialog.branch')}</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder={t('users.dialog.selectBranch')} /></SelectTrigger></FormControl><SelectContent>{branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
               )}
               {watchRole === ROLES.REGIONAL_MANAGER && (
-                <FormField control={form.control} name="region" render={({ field }) => (<FormItem><FormLabel>المنطقة</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="اختر منطقة" /></SelectTrigger></FormControl><SelectContent>{regions.map(r => <SelectItem key={r.id} value={r.name}>{r.name}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="region" render={({ field }) => (<FormItem><FormLabel>{t('users.dialog.region')}</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder={t('users.dialog.selectRegion')} /></SelectTrigger></FormControl><SelectContent>{regions.map(r => <SelectItem key={r.id} value={r.name}>{r.name}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
               )}
 
-              <DialogFooter><Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>إلغاء</Button><Button type="submit">حفظ</Button></DialogFooter>
+              <DialogFooter><Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>{t('common.cancel')}</Button><Button type="submit">{t('common.save')}</Button></DialogFooter>
             </form>
           </Form>
         </DialogContent>
       </Dialog>
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
-          <AlertDialogHeader><AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle><AlertDialogDescription>سيتم حذف المستخدم "{userToDelete?.name}" نهائياً. لا يمكن التراجع عن هذا الإجراء.</AlertDialogDescription></AlertDialogHeader>
-          <AlertDialogFooter><AlertDialogCancel>إلغاء</AlertDialogCancel><AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive hover:bg-destructive/90">حذف</AlertDialogAction></AlertDialogFooter>
+          <AlertDialogHeader><AlertDialogTitle>{t('common.areYouSure')}</AlertDialogTitle><AlertDialogDescription>{t('users.deleteDialog.description', { userName: userToDelete?.name })}</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogFooter><AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel><AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive hover:bg-destructive/90">{t('common.delete')}</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </>

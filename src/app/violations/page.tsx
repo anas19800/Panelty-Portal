@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
+import { useTranslation } from 'react-i18next';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,11 +18,11 @@ import { collection, getDocs, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/context/auth-context';
 import { getPermission, PERMISSIONS, ROLES } from '@/lib/permissions';
-import { violationStatusMap } from '@/lib/i18n';
 
 export default function ViolationsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [violations, setViolations] = useState<Violation[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -38,13 +39,13 @@ export default function ViolationsPage() {
             setViolations(violationsData);
         } catch (error) {
             console.error('Failed to load violations from Firestore', error);
-            toast({ variant: 'destructive', description: 'فشل في تحميل المخالفات.' });
+            toast({ variant: 'destructive', description: t('violations.toasts.loadError') });
         } finally {
             setIsLoaded(true);
         }
     }
     fetchViolations();
-  }, [toast]);
+  }, [toast, t]);
   
   const filteredViolations = useMemo(() => {
     if (!user) return [];
@@ -69,10 +70,10 @@ export default function ViolationsPage() {
       try {
         await deleteDoc(doc(db, "violations", violationToDelete.id));
         setViolations(violations.filter(v => v.id !== violationToDelete.id));
-        toast({ description: 'تم حذف المخالفة بنجاح.' });
+        toast({ description: t('violations.toasts.deleteSuccess') });
       } catch (error) {
         console.error("Error deleting violation: ", error);
-        toast({ variant: 'destructive', description: 'فشل في حذف المخالفة.' });
+        toast({ variant: 'destructive', description: t('violations.toasts.deleteError') });
       } finally {
         setDeleteDialogOpen(false);
         setViolationToDelete(null);
@@ -83,7 +84,7 @@ export default function ViolationsPage() {
   if (!isLoaded) {
     return (
        <div className="flex flex-col gap-6">
-        <PageHeader title="سجل المخالفات" />
+        <PageHeader title={t('violations.title')} />
         <Card>
           <CardHeader>
             <Skeleton className="h-8 w-48" />
@@ -101,35 +102,33 @@ export default function ViolationsPage() {
   return (
     <>
       <div className="flex flex-col gap-6">
-        <PageHeader title="سجل المخالفات">
+        <PageHeader title={t('violations.title')}>
           {canWrite && (
             <Button asChild>
                 <Link href="/violations/new">
                 <PlusCircle className="mr-2 h-4 w-4" />
-                تسجيل مخالفة جديدة
+                {t('violations.addNew')}
                 </Link>
             </Button>
           )}
         </PageHeader>
         <Card>
           <CardHeader>
-            <CardTitle>جميع المخالفات</CardTitle>
-            <CardDescription>
-              قائمة بجميع مخالفات البلدية المسجلة على الفروع.
-            </CardDescription>
+            <CardTitle>{t('violations.listTitle')}</CardTitle>
+            <CardDescription>{t('violations.listDescription')}</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>رقم المخالفة</TableHead>
-                  <TableHead>الفرع</TableHead>
-                  <TableHead>تاريخ الرصد</TableHead>
-                  <TableHead>آخر موعد للاعتراض</TableHead>
-                  <TableHead>القيمة</TableHead>
-                  <TableHead>المرفقات</TableHead>
-                  <TableHead>الحالة</TableHead>
-                  {canWrite && <TableHead><span className="sr-only">Actions</span></TableHead>}
+                  <TableHead>{t('violations.table.number')}</TableHead>
+                  <TableHead>{t('violations.table.branch')}</TableHead>
+                  <TableHead>{t('violations.table.detectionDate')}</TableHead>
+                  <TableHead>{t('violations.table.objectionDeadline')}</TableHead>
+                  <TableHead>{t('violations.table.amount')}</TableHead>
+                  <TableHead>{t('violations.table.attachments')}</TableHead>
+                  <TableHead>{t('violations.table.status')}</TableHead>
+                  {canWrite && <TableHead><span className="sr-only">{t('nav.actions')}</span></TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -142,7 +141,7 @@ export default function ViolationsPage() {
                     <TableCell>{violation.date}</TableCell>
                     <TableCell>{violation.lastObjectionDate || '—'}</TableCell>
                     <TableCell>
-                      {violation.amount.toLocaleString('ar-SA', {
+                      {violation.amount.toLocaleString(i18n.language === 'ar' ? 'ar-SA' : 'en-US', {
                         style: 'currency',
                         currency: 'SAR',
                       })}
@@ -168,7 +167,7 @@ export default function ViolationsPage() {
                         }
                         className="bg-opacity-20 text-opacity-100"
                       >
-                        {violationStatusMap[violation.status] || violation.status}
+                        {t(`violationStatuses.${violation.status}`)}
                       </Badge>
                     </TableCell>
                     {canWrite && (
@@ -181,16 +180,16 @@ export default function ViolationsPage() {
                             </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>إجراءات</DropdownMenuLabel>
+                              <DropdownMenuLabel>{t('nav.actions')}</DropdownMenuLabel>
                               <DropdownMenuItem asChild>
                                 <Link href={`/violations/${violation.id}/edit`}>
                                   <FilePenLine className="ml-2 h-4 w-4" />
-                                  تعديل
+                                  {t('common.edit')}
                                 </Link>
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => handleDeleteClick(violation)} className="text-destructive focus:text-destructive">
                                   <Trash2 className="ml-2 h-4 w-4" />
-                                  حذف
+                                  {t('common.delete')}
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
@@ -207,15 +206,15 @@ export default function ViolationsPage() {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle>
+            <AlertDialogTitle>{t('common.areYouSure')}</AlertDialogTitle>
             <AlertDialogDescription>
-              سيتم حذف المخالفة رقم "{violationToDelete?.violationNumber}" نهائياً. لا يمكن التراجع عن هذا الإجراء.
+              {t('violations.deleteDialog.description', { violationNumber: violationToDelete?.violationNumber })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive hover:bg-destructive/90">
-              حذف
+              {t('common.delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
