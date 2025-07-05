@@ -178,16 +178,16 @@ function UserMenu() {
         <DropdownMenuLabel>{user?.name ?? authUser?.email}</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem disabled>
-          <Settings className="mr-2 h-4 w-4" />
+          <Settings className="mr-2 h-4 w-4 rtl:mr-0 rtl:ml-2" />
           <span>{t('nav.settings')}</span>
         </DropdownMenuItem>
         <DropdownMenuItem disabled>
-          <LifeBuoy className="mr-2 h-4 w-4" />
+          <LifeBuoy className="mr-2 h-4 w-4 rtl:mr-0 rtl:ml-2" />
           <span>{t('nav.support')}</span>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleLogout}>
-          <LogOut className="mr-2 h-4 w-4" />
+          <LogOut className="mr-2 h-4 w-4 rtl:mr-0 rtl:ml-2" />
           <span>{t('nav.logout')}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>

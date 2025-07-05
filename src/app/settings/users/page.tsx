@@ -172,7 +172,7 @@ function UsersPageContent() {
     <>
       <div className="flex flex-col gap-6">
         <PageHeader title={t('users.title')}>
-          <Button onClick={handleAddNew}><PlusCircle className="mr-2 h-4 w-4" /> {t('users.addNew')}</Button>
+          <Button onClick={handleAddNew}><PlusCircle className="mr-2 rtl:ml-2 rtl:mr-0 h-4 w-4" /> {t('users.addNew')}</Button>
         </PageHeader>
         <Card>
           <CardHeader><CardTitle>{t('users.listTitle')}</CardTitle><CardDescription>{t('users.listDescription')}</CardDescription></CardHeader>
@@ -193,7 +193,7 @@ function UsersPageContent() {
                           <DropdownMenuLabel>{t('nav.actions')}</DropdownMenuLabel>
                           <DropdownMenuItem onClick={() => handleEdit(user)}>{t('common.edit')}</DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleToggleStatus(user)}>{user.status === 'active' ? t('users.actions.toggleInactive') : t('users.actions.toggleActive')}</DropdownMenuItem>
-                          <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleDeleteClick(user)}><Trash2 className="ml-2 h-4 w-4" />{t('common.delete')}</DropdownMenuItem>
+                          <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleDeleteClick(user)}><Trash2 className="ml-2 rtl:mr-2 rtl:ml-0 h-4 w-4" />{t('common.delete')}</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>

@@ -271,7 +271,7 @@ export default function ObjectionsPage() {
         <PageHeader title={t('objections.title')}>
           {canWrite && (
             <Button onClick={() => setDialogOpen(true)}>
-                <PlusCircle className="mr-2 h-4 w-4" />
+                <PlusCircle className="mr-2 rtl:ml-2 rtl:mr-0 h-4 w-4" />
                 {t('objections.addNew')}
             </Button>
           )}
@@ -361,7 +361,7 @@ export default function ObjectionsPage() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
                 <div className="grid grid-cols-2 gap-4">
                   <FormField control={form.control} name="number" render={({ field }) => (<FormItem><FormLabel>{t('objections.dialog.number')}</FormLabel><FormControl><Input placeholder={t('objections.dialog.numberPlaceholder')} {...field} /></FormControl><FormMessage /></FormItem>)} />
-                  <FormField control={form.control} name="date" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>{t('objections.dialog.date')}</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full justify-start text-right font-normal", !field.value && "text-muted-foreground")}><CalendarIcon className="ml-2 h-4 w-4" />{field.value ? format(field.value, "PPP") : <span>{t('objections.dialog.selectDate')}</span>}</Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)} />
+                  <FormField control={form.control} name="date" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>{t('objections.dialog.date')}</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full justify-start text-left rtl:text-right font-normal", !field.value && "text-muted-foreground")}><CalendarIcon className="mr-2 rtl:ml-2 rtl:mr-0 h-4 w-4" />{field.value ? format(field.value, "PPP") : <span>{t('objections.dialog.selectDate')}</span>}</Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)} />
                 </div>
                 <FormField
                   control={form.control}

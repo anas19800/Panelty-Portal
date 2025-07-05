@@ -106,7 +106,7 @@ export default function ViolationsPage() {
           {canWrite && (
             <Button asChild>
                 <Link href="/violations/new">
-                <PlusCircle className="mr-2 h-4 w-4" />
+                <PlusCircle className="mr-2 rtl:ml-2 rtl:mr-0 h-4 w-4" />
                 {t('violations.addNew')}
                 </Link>
             </Button>
@@ -183,12 +183,12 @@ export default function ViolationsPage() {
                               <DropdownMenuLabel>{t('nav.actions')}</DropdownMenuLabel>
                               <DropdownMenuItem asChild>
                                 <Link href={`/violations/${violation.id}/edit`}>
-                                  <FilePenLine className="ml-2 h-4 w-4" />
+                                  <FilePenLine className="ml-2 rtl:mr-2 rtl:ml-0 h-4 w-4" />
                                   {t('common.edit')}
                                 </Link>
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => handleDeleteClick(violation)} className="text-destructive focus:text-destructive">
-                                  <Trash2 className="ml-2 h-4 w-4" />
+                                  <Trash2 className="ml-2 rtl:mr-2 rtl:ml-0 h-4 w-4" />
                                   {t('common.delete')}
                               </DropdownMenuItem>
                             </DropdownMenuContent>
