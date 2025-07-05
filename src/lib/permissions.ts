@@ -64,8 +64,22 @@ const rolePermissions: Record<string, Record<Feature, Permission>> = {
     },
 };
 
+// This map allows us to handle old data that might still be in the database
+const roleMigrationMap: Record<string, string> = {
+  'مدير فرع': ROLES.BRANCH_MANAGER,
+  'مدير إقليمي': ROLES.REGIONAL_MANAGER,
+  'مسؤول جودة': ROLES.QUALITY_OFFICER,
+  'إدارة عليا': ROLES.SENIOR_MANAGEMENT,
+  'مسؤول نظام': ROLES.SYSTEM_ADMIN,
+};
+
+
 export function getPermission(role: Role | undefined, feature: Feature): Permission {
     if (!role) return 'none';
+    
+    // Check if the role is an old Arabic value and map it to the new key for backward compatibility.
+    const mappedRole = roleMigrationMap[role] || role;
+    
     // @ts-ignore
-    return rolePermissions[role]?.[feature] ?? 'none';
+    return rolePermissions[mappedRole]?.[feature] ?? 'none';
 }
