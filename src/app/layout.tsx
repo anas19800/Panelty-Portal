@@ -1,40 +1,14 @@
-'use client';
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import "./globals.css";
+import Sidebar from "@/components/sidebar";
 
-import './globals.css';
-import { AppShell } from '@/components/app-shell';
-import { Toaster } from '@/components/ui/toaster';
-import { AuthProvider } from '@/context/auth-context';
-import I18nProvider from '@/context/i18n-provider';
-import { useTranslation } from 'react-i18next';
-import { useEffect } from 'react';
+const inter = Inter({ subsets: ["latin"] });
 
-// This is a wrapper to use the hook, since RootLayout itself is not inside the provider
-function DynamicHtml({ children }: { children: React.ReactNode }) {
-    const { t, i18n } = useTranslation();
-
-    useEffect(() => {
-        document.documentElement.lang = i18n.language;
-        document.documentElement.dir = i18n.dir(i18n.language);
-    }, [i18n, i18n.language]);
-
-    return (
-        <html lang={i18n.language} dir={i18n.dir(i18n.language)} suppressHydrationWarning>
-            <head>
-                <title>{t('app.title')}</title>
-                <meta name="description" content={t('app.description')} />
-                <link rel="preconnect" href="https://fonts.googleapis.com" />
-                <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-                <link
-                    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Code+Pro:wght@400;500&display=swap"
-                    rel="stylesheet"
-                />
-            </head>
-            <body className="font-body antialiased">
-                {children}
-            </body>
-        </html>
-    );
-}
+export const metadata: Metadata = {
+  title: "SmartSheet - إدارة المشاريع والمهام",
+  description: "منصة متكاملة لإدارة المشاريع والمهام وتوزيع الصلاحيات",
+};
 
 export default function RootLayout({
   children,
@@ -42,13 +16,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <I18nProvider>
-        <DynamicHtml>
-            <AuthProvider>
-                <AppShell>{children}</AppShell>
-                <Toaster />
-            </AuthProvider>
-        </DynamicHtml>
-    </I18nProvider>
+    <html lang="ar" dir="rtl">
+      <body className={inter.className}>
+        <div className="flex h-screen bg-gray-50">
+          <Sidebar />
+          <div className="flex-1 overflow-auto">
+            {children}
+          </div>
+        </div>
+      </body>
+    </html>
   );
 }
