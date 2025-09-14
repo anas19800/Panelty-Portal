@@ -1,0 +1,694 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>لوحة متابعة الأفرع – ماستر داتا + مهام + KPIs (نموذج أولي)</title>
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --ink:#111; --muted:#666; --br:#e6e6e6; }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+  header{background:#111;color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+  header h1{font-size:16px;margin:0}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  main{max-width:1200px;margin:auto;padding:16px}
+  nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+  nav button{padding:8px 10px;border:1px solid var(--br);background:var(--card);border-radius:8px;cursor:pointer}
+  nav button.active{background:#111;color:#fff;border-color:#111}
+  .card{background:var(--card);border:1px solid var(--br);border-radius:12px;padding:12px;margin:10px 0}
+  input,select,textarea,button{padding:8px;border:1px solid var(--br);border-radius:8px;background:#fff}
+  button.primary{background:#111;color:#fff;border-color:#111}
+  .grid{display:grid;gap:10px}
+  .grid-2{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+  .grid-3{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+  table{width:100%;border-collapse:collapse}
+  th,td{border-bottom:1px solid #eee;padding:8px;text-align:start}
+  th{background:#fafafa}
+  .muted{color:var(--muted);font-size:12px}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .pill{padding:2px 6px;border-radius:999px;background:#efefef;font-size:12px}
+  .danger{color:#a10000}
+  .ok{color:#0a7a0a}
+  .kpi-box{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
+  .kpi{background:#fff;border:1px solid var(--br);border-radius:10px;padding:10px}
+  canvas{width:100%;max-width:100%;border:1px solid #eee;border-radius:8px}
+  details{background:#fafafa;border:1px dashed #ddd;border-radius:8px;padding:8px}
+</style>
+</head>
+<body>
+<header>
+  <h1>📊 لوحة متابعة الأفرع — ماستر داتا + مهام + KPIs</h1>
+  <div class="bar">
+    <label>تسجيل الدخول كـ:
+      <select id="currentUser"></select>
+    </label>
+    <button id="exportBtn">تصدير JSON</button>
+    <input id="importInput" type="file" accept="application/json">
+  </div>
+</header>
+
+<main>
+  <nav>
+    <button data-tab="dashboard" class="active">اللوحة</button>
+    <button data-tab="branches">الفروع</button>
+    <button data-tab="people">الموظفون</button>
+    <button data-tab="tickets">المهام/المشكلات</button>
+    <button data-tab="kpis">KPIs</button>
+    <button data-tab="settings">الأدوار والصلاحيات</button>
+  </nav>
+
+  <!-- Dashboard -->
+  <section id="tab-dashboard" class="card">
+    <h3>ملخص سريع</h3>
+    <div class="kpi-box" id="topKPIs"></div>
+    <div class="grid grid-2">
+      <div class="card">
+        <h4>تذاكر مفتوحة حسب التصنيف</h4>
+        <div id="openByCat"></div>
+      </div>
+      <div class="card">
+        <h4>متأخر عن SLA</h4>
+        <div id="overdueList"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Branches -->
+  <section id="tab-branches" class="card" hidden>
+    <div class="row" style="justify-content:space-between">
+      <h3>الفروع</h3>
+      <button class="primary" id="addBranchBtn">+ فرع جديد</button>
+    </div>
+    <div id="branchForm" class="card" hidden>
+      <div class="grid grid-3">
+        <input id="b_code" placeholder="رمز الفرع (KR-111)">
+        <input id="b_city" placeholder="المدينة">
+        <input id="b_district" placeholder="الحي">
+        <select id="b_brand">
+          <option value="">البراند…</option>
+          <option>Casa Pasta</option><option>Kaza Basta</option><option>Chick’n Dip</option><option>Other</option>
+        </select>
+        <input id="b_area" placeholder="اسم المنطقة الإدارية (لربط مدير منطقة)">
+        <input id="b_opened" type="date" placeholder="تاريخ الافتتاح">
+      </div>
+      <div class="row" style="margin-top:8px">
+        <button id="saveBranchBtn" class="primary">حفظ</button>
+        <button id="cancelBranchBtn">إلغاء</button>
+      </div>
+      <div class="muted">ملاحظة: ربط الفرع بالـ Brand وبـ Area يساعد على التوزيع التلقائي للمهام.</div>
+    </div>
+    <table id="branchesTable"><thead><tr>
+      <th>الفرع</th><th>المدينة</th><th>الحي</th><th>البراند</th><th>المنطقة</th><th>افتتاح</th><th></th>
+    </tr></thead><tbody></tbody></table>
+  </section>
+
+  <!-- People -->
+  <section id="tab-people" class="card" hidden>
+    <div class="row" style="justify-content:space-between">
+      <h3>الموظفون</h3>
+      <button class="primary" id="addUserBtn">+ موظف جديد</button>
+    </div>
+    <div id="userForm" class="card" hidden>
+      <div class="grid grid-3">
+        <input id="u_name" placeholder="الاسم">
+        <input id="u_email" placeholder="Email">
+        <select id="u_role">
+          <option>Branch Manager</option>
+          <option>Area Manager</option>
+          <option>Brand Manager</option>
+          <option>Marketing Manager</option>
+          <option>Maintenance Manager</option>
+          <option>RealEstate Manager</option>
+          <option>Admin</option>
+        </select>
+        <input id="u_area" placeholder="المنطقة (إن وُجد)">
+        <input id="u_brand" placeholder="البراند (إن وُجد)">
+        <input id="u_branch" placeholder="رمز الفرع (إن وُجد)">
+      </div>
+      <div class="row" style="margin-top:8px">
+        <button id="saveUserBtn" class="primary">حفظ</button>
+        <button id="cancelUserBtn">إلغاء</button>
+      </div>
+      <div class="muted">مهم: عيّن Area Manager لمنطقة معيّنة، وBrand Manager لبراند معيّن، وBranch Manager لفرع معيّن.</div>
+    </div>
+    <table id="peopleTable"><thead><tr>
+      <th>الاسم</th><th>الدور</th><th>المنطقة</th><th>البراند</th><th>الفرع</th><th>Email</th><th></th>
+    </tr></thead><tbody></tbody></table>
+  </section>
+
+  <!-- Tickets -->
+  <section id="tab-tickets" class="card" hidden>
+    <div class="row" style="justify-content:space-between">
+      <h3>المهام/المشكلات</h3>
+      <button class="primary" id="addTicketBtn">+ تذكرة جديدة</button>
+    </div>
+
+    <div id="ticketForm" class="card" hidden>
+      <div class="grid grid-3">
+        <select id="t_branch"></select>
+        <select id="t_category">
+          <option>Operations</option><option>Equipment</option><option>Marketing</option>
+          <option>Brand</option><option>RealEstate</option><option>Supply</option><option>HR</option><option>Municipality</option><option>Other</option>
+        </select>
+        <select id="t_priority"><option>High</option><option selected>Medium</option><option>Low</option></select>
+        <input id="t_title" placeholder="عنوان مختصر">
+        <input id="t_sla" type="date">
+      </div>
+      <textarea id="t_desc" placeholder="وصف المشكلة…"></textarea>
+      <input id="t_attach" placeholder="روابط مرفقات مفصولة بفواصل">
+      <div class="row" style="margin-top:8px">
+        <button id="saveTicketBtn" class="primary">حفظ</button>
+        <button id="cancelTicketBtn">إلغاء</button>
+      </div>
+      <details style="margin-top:8px">
+        <summary>المستلمون المقترحون (Routing)</summary>
+        <div id="routingPreview" class="muted">اختر الفرع والتصنيف لاقتراح المستلمين.</div>
+      </details>
+    </div>
+
+    <div class="row" style="gap:12px;margin:8px 0">
+      <select id="f_status">
+        <option value="">كل الحالات</option>
+        <option>New</option><option>Under Review</option><option>Solution Proposed</option>
+        <option>Approved</option><option>Implemented</option><option>Closed</option><option>Needs Info</option>
+      </select>
+      <select id="f_priority2">
+        <option value="">كل الأولويات</option>
+        <option>High</option><option>Medium</option><option>Low</option>
+      </select>
+      <input id="q_tickets" placeholder="بحث (فرع/عنوان/مدينة/تصنيف)">
+    </div>
+
+    <table id="ticketsTable"><thead><tr>
+      <th>العنوان</th><th>الفرع</th><th>التصنيف</th><th>الأولوية</th><th>الحالة</th><th>SLA</th><th>مستلمين</th><th></th>
+    </tr></thead><tbody></tbody></table>
+  </section>
+
+  <!-- KPIs -->
+  <section id="tab-kpis" class="card" hidden>
+    <div class="row">
+      <select id="k_branch"></select>
+      <select id="k_metric">
+        <option value="Sales">Sales</option>
+        <option value="Orders">Orders</option>
+        <option value="NetProfitPct">NetProfit%</option>
+        <option value="FoodCostPct">FoodCost%</option>
+        <option value="Complaints">Complaints</option>
+      </select>
+      <button id="addKpiPointBtn">+ نقطة KPI</button>
+    </div>
+    <div class="grid grid-2">
+      <div class="card">
+        <canvas id="kpiChart" width="800" height="260"></canvas>
+        <div class="muted" id="kpiNote">يعرض الخط الزمني للمؤشر المختار.</div>
+      </div>
+      <div class="card">
+        <h4>جدول النقاط</h4>
+        <table id="kpiTable"><thead><tr><th>التاريخ</th><th>Sales</th><th>Orders</th><th>NetProfit%</th><th>FoodCost%</th><th>Complaints</th><th></th></tr></thead><tbody></tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Roles -->
+  <section id="tab-settings" class="card" hidden>
+    <h3>الأدوار والصلاحيات (نموذج أولي)</h3>
+    <p class="muted">يمكن تعديل المصفوفة لاحقًا؛ الآن نطبّقها منطقيًا داخل الواجهة.</p>
+    <table>
+      <thead><tr><th>الدور</th><th>إنشاء/تعديل تذكرة</th><th>تغيير حالة</th><th>اقتراح/اعتماد حل</th><th>CRUD فروع/موظفين</th><th>تعديل KPIs</th></tr></thead>
+      <tbody>
+        <tr><td>Branch Manager</td><td>✅ (لفرعه)</td><td>⚠️ محدود</td><td>❌</td><td>❌</td><td>❌</td></tr>
+        <tr><td>Area Manager</td><td>✅ (ضمن منطقته)</td><td>✅</td><td>✅</td><td>❌</td><td>❌</td></tr>
+        <tr><td>Brand Manager</td><td>✅ (لفروع براند)</td><td>✅</td><td>✅</td><td>❌</td><td>❌</td></tr>
+        <tr><td>Marketing Manager</td><td>✅ (مهام التسويق)</td><td>✅</td><td>✅</td><td>❌</td><td>❌</td></tr>
+        <tr><td>Maintenance Manager</td><td>✅ (المعدات/الصيانة)</td><td>✅</td><td>✅</td><td>❌</td><td>❌</td></tr>
+        <tr><td>RealEstate Manager</td><td>✅ (العقاري)</td><td>✅</td><td>✅</td><td>❌</td><td>❌</td></tr>
+        <tr><td>Admin</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+      </tbody>
+    </table>
+  </section>
+</main>
+
+<script>
+/* ============ LocalStorage & Seed ============ */
+const LS = {
+  branches: "af_branches_v1",
+  users: "af_users_v1",
+  tickets: "af_tickets_v1",
+  kpis: "af_kpis_v1",
+  session: "af_session_user_v1"
+};
+const get = (k)=> JSON.parse(localStorage.getItem(k)||"[]");
+const set = (k,v)=> localStorage.setItem(k, JSON.stringify(v));
+const today = ()=> new Date().toISOString().slice(0,10);
+const genId = (p)=> `${p}-${new Date().getFullYear()}-${Math.floor(Math.random()*9000+1000)}`;
+
+(function seed(){
+  if (!get(LS.branches).length){
+    set(LS.branches, [
+      {code:"KR-111", city:"Riyadh", district:"An Narjis", brand:"Kaza Basta", area:"Riyadh North", opened: "2024-05-01"},
+      {code:"KW-041", city:"Makkah", district:"Al Awali", brand:"Casa Pasta", area:"Makkah", opened: "2023-11-12"}
+    ]);
+  }
+  if (!get(LS.users).length){
+    set(LS.users, [
+      {id:"U1", name:"أنس (مدير منطقة)", email:"anas.area@example.com", role:"Area Manager", area:"Riyadh North", brand:"", branch:""},
+      {id:"U2", name:"م. أحمد (مدير صيانة)", email:"ahmed.maint@example.com", role:"Maintenance Manager", area:"", brand:"", branch:""},
+      {id:"U3", name:"سارة (Brand)", email:"sarah.brand@example.com", role:"Brand Manager", area:"", brand:"Kaza Basta", branch:""},
+      {id:"U4", name:"ليان (Marketing)", email:"layan.mkt@example.com", role:"Marketing Manager", area:"", brand:"", branch:""},
+      {id:"U5", name:"خالد (مدير فرع)", email:"khaled.kr111@example.com", role:"Branch Manager", area:"", brand:"", branch:"KR-111"},
+      {id:"U0", name:"⚙️ Admin", email:"admin@example.com", role:"Admin", area:"", brand:"", branch:""}
+    ]);
+  }
+  if (!get(LS.tickets).length){
+    set(LS.tickets, [
+      {id:genId("T"), branch:"KR-111", category:"Equipment", priority:"High", title:"عطل فرن", desc:"الفرن لا يتجاوز 160°", status:"Under Review",
+       sla:today(), assignees:["U1","U2","U3"], proposed:"فحص عنصر التسخين", approved:false,
+       comments:[{by:"U5",at:new Date().toISOString(),text:"تم الإبلاغ"}], history:[{at:new Date().toISOString(),from:"New",to:"Under Review",by:"U5"}]}
+    ]);
+  }
+  if (!get(LS.kpis).length){
+    set(LS.kpis, [
+      {branch:"KR-111", date:"2025-08-01", Sales:120000, Orders:2300, NetProfitPct:11.2, FoodCostPct:31.5, Complaints:8},
+      {branch:"KR-111", date:"2025-09-01", Sales:132000, Orders:2450, NetProfitPct:12.0, FoodCostPct:30.9, Complaints:6},
+      {branch:"KW-041", date:"2025-08-01", Sales:90000, Orders:1700, NetProfitPct:9.5, FoodCostPct:33.2, Complaints:5},
+      {branch:"KW-041", date:"2025-09-01", Sales:97000, Orders:1810, NetProfitPct:10.1, FoodCostPct:32.8, Complaints:4}
+    ]);
+  }
+})();
+const USERS = ()=> get(LS.users);
+const BRANCHES = ()=> get(LS.branches);
+const TICKETS = ()=> get(LS.tickets);
+const KPIS = ()=> get(LS.kpis);
+
+/* ============ Tabs ============ */
+const tabs = document.querySelectorAll('nav button');
+const sections = {
+  dashboard: document.getElementById('tab-dashboard'),
+  branches: document.getElementById('tab-branches'),
+  people: document.getElementById('tab-people'),
+  tickets: document.getElementById('tab-tickets'),
+  kpis: document.getElementById('tab-kpis'),
+  settings: document.getElementById('tab-settings'),
+};
+tabs.forEach(b=> b.onclick = ()=>{
+  tabs.forEach(x=>x.classList.remove('active'));
+  b.classList.add('active');
+  Object.values(sections).forEach(s=>s.hidden=true);
+  sections[b.dataset.tab].hidden=false;
+});
+
+/* ============ Session User ============ */
+const currentUserSel = document.getElementById('currentUser');
+function fillCurrentUser(){
+  const list = USERS();
+  currentUserSel.innerHTML = list.map(u=>`<option value="${u.id}">${u.name} (${u.role})</option>`).join("");
+  const saved = localStorage.getItem(LS.session);
+  if (saved && list.find(u=>u.id===saved)) currentUserSel.value = saved;
+}
+function CU(){ return USERS().find(u=>u.id===currentUserSel.value); }
+currentUserSel.onchange = ()=> localStorage.setItem(LS.session, currentUserSel.value);
+
+/* ============ Util ============ */
+function byId(id){ return document.getElementById(id); }
+function userName(id){ const u = USERS().find(x=>x.id===id); return u?u.name:"—"; }
+function canAdmin(){ return CU()?.role==="Admin"; }
+
+/* ============ Dashboard ============ */
+function renderDashboard(){
+  const t = TICKETS();
+  const openStatuses = ["New","Under Review","Solution Proposed","Approved","Implemented","Needs Info"];
+  const openCount = t.filter(x=>openStatuses.includes(x.status)).length;
+  const closed = t.filter(x=>x.status==="Closed").length;
+  const overdue = t.filter(x=>{
+    if (!openStatuses.includes(x.status)) return false;
+    return x.sla && x.sla < today();
+  }).length;
+
+  const topKPIs = byId('topKPIs');
+  topKPIs.innerHTML = `
+    <div class="kpi"><div class="muted">تذاكر مفتوحة</div><div style="font-size:24px;font-weight:700">${openCount}</div></div>
+    <div class="kpi"><div class="muted">مغلقة</div><div style="font-size:24px;font-weight:700">${closed}</div></div>
+    <div class="kpi"><div class="muted">متأخرة عن SLA</div><div class="${overdue?'danger':'ok'}" style="font-size:24px;font-weight:700">${overdue}</div></div>
+  `;
+
+  // open by category
+  const catAgg = {};
+  t.filter(x=>openStatuses.includes(x.status)).forEach(x=>{
+    catAgg[x.category] = (catAgg[x.category]||0)+1;
+  });
+  byId('openByCat').innerHTML = Object.keys(catAgg).length
+    ? Object.entries(catAgg).map(([k,v])=>`<div class="row"><span class="pill">${k}</span><b>${v}</b></div>`).join("")
+    : `<div class="muted">لا توجد بيانات.</div>`;
+
+  // overdue list
+  const od = t.filter(x=>openStatuses.includes(x.status) && x.sla && x.sla<today());
+  byId('overdueList').innerHTML = od.length
+    ? `<ul>${od.map(x=>`<li><b>${x.title}</b> — ${x.branch} — SLA: <span class="danger">${x.sla}</span></li>`).join("")}</ul>`
+    : `<div class="muted">لا يوجد تذاكر متأخرة.</div>`;
+}
+
+/* ============ Branches CRUD ============ */
+let editingBranch = null;
+const bForm = {
+  wrap: byId('branchForm'),
+  code: byId('b_code'),
+  city: byId('b_city'),
+  district: byId('b_district'),
+  brand: byId('b_brand'),
+  area: byId('b_area'),
+  opened: byId('b_opened'),
+};
+byId('addBranchBtn').onclick = ()=>{ editingBranch=null; bForm.wrap.hidden=false; bForm.code.value=""; bForm.city.value=""; bForm.district.value=""; bForm.brand.value=""; bForm.area.value=""; bForm.opened.value=""; };
+byId('cancelBranchBtn').onclick = ()=> bForm.wrap.hidden=true;
+byId('saveBranchBtn').onclick = ()=>{
+  if (!bForm.code.value){ alert("رمز الفرع مطلوب."); return;}
+  const arr = BRANCHES();
+  if (editingBranch){
+    const i = arr.findIndex(x=>x.code===editingBranch);
+    if (i>=0) Object.assign(arr[i], {code:bForm.code.value, city:bForm.city.value, district:bForm.district.value, brand:bForm.brand.value, area:bForm.area.value, opened:bForm.opened.value});
+  } else {
+    if (arr.find(x=>x.code===bForm.code.value)){ alert("رمز الفرع موجود."); return;}
+    arr.push({code:bForm.code.value, city:bForm.city.value, district:bForm.district.value, brand:bForm.brand.value, area:bForm.area.value, opened:bForm.opened.value});
+  }
+  set(LS.branches, arr); bForm.wrap.hidden=true; renderBranches(); fillBranchPickers();
+};
+function renderBranches(){
+  const tb = byId('branchesTable').querySelector('tbody');
+  tb.innerHTML = BRANCHES().map(b=>`
+    <tr>
+      <td>${b.code}</td><td>${b.city||"-"}</td><td>${b.district||"-"}</td><td>${b.brand||"-"}</td><td>${b.area||"-"}</td><td>${b.opened||"-"}</td>
+      <td class="row">
+        <button onclick="editBranch('${b.code}')">تحرير</button>
+        ${canAdmin()?`<button class="danger" onclick="delBranch('${b.code}')">حذف</button>`:""}
+      </td>
+    </tr>`).join("");
+}
+window.editBranch = (code)=>{
+  const b = BRANCHES().find(x=>x.code===code); if(!b) return;
+  editingBranch=code; bForm.wrap.hidden=false;
+  bForm.code.value=b.code; bForm.city.value=b.city||""; bForm.district.value=b.district||"";
+  bForm.brand.value=b.brand||""; bForm.area.value=b.area||""; bForm.opened.value=b.opened||"";
+};
+window.delBranch = (code)=>{
+  if (!canAdmin()) return alert("للمشرف فقط");
+  if (!confirm("حذف الفرع؟")) return;
+  set(LS.branches, BRANCHES().filter(x=>x.code!==code));
+  renderBranches(); fillBranchPickers();
+};
+
+/* ============ People CRUD ============ */
+let editingUser = null;
+const uForm = {
+  wrap: byId('userForm'),
+  name: byId('u_name'),
+  email: byId('u_email'),
+  role: byId('u_role'),
+  area: byId('u_area'),
+  brand: byId('u_brand'),
+  branch: byId('u_branch'),
+};
+byId('addUserBtn').onclick = ()=>{ editingUser=null; uForm.wrap.hidden=false; uForm.name.value=""; uForm.email.value=""; uForm.role.value="Branch Manager"; uForm.area.value=""; uForm.brand.value=""; uForm.branch.value=""; };
+byId('cancelUserBtn').onclick = ()=> uForm.wrap.hidden=true;
+byId('saveUserBtn').onclick = ()=>{
+  if (!uForm.name.value){ alert("الاسم مطلوب."); return;}
+  const arr = USERS();
+  if (editingUser){
+    const i = arr.findIndex(x=>x.id===editingUser);
+    if (i>=0) Object.assign(arr[i], {name:uForm.name.value, email:uForm.email.value, role:uForm.role.value, area:uForm.area.value, brand:uForm.brand.value, branch:uForm.branch.value});
+  } else {
+    arr.push({id:genId("U"), name:uForm.name.value, email:uForm.email.value, role:uForm.role.value, area:uForm.area.value, brand:uForm.brand.value, branch:uForm.branch.value});
+  }
+  set(LS.users, arr); uForm.wrap.hidden=true; renderPeople(); fillCurrentUser();
+};
+function renderPeople(){
+  const tb = byId('peopleTable').querySelector('tbody');
+  tb.innerHTML = USERS().map(u=>`
+    <tr>
+      <td>${u.name}</td><td>${u.role}</td><td>${u.area||"-"}</td><td>${u.brand||"-"}</td><td>${u.branch||"-"}</td><td>${u.email||"-"}</td>
+      <td class="row">
+        <button onclick="editUser('${u.id}')">تحرير</button>
+        ${canAdmin()?`<button class="danger" onclick="delUser('${u.id}')">حذف</button>`:""}
+      </td>
+    </tr>`).join("");
+}
+window.editUser = (id)=>{
+  const u = USERS().find(x=>x.id===id); if(!u) return;
+  editingUser=id; uForm.wrap.hidden=false;
+  uForm.name.value=u.name; uForm.email.value=u.email||""; uForm.role.value=u.role; uForm.area.value=u.area||""; uForm.brand.value=u.brand||""; uForm.branch.value=u.branch||"";
+};
+window.delUser = (id)=>{
+  if (!canAdmin()) return alert("للمشرف فقط");
+  if (!confirm("حذف الموظف؟")) return;
+  set(LS.users, USERS().filter(x=>x.id!==id));
+  renderPeople(); fillCurrentUser();
+};
+
+/* ============ Routing Rules ============ */
+function routeFor(ticket){
+  const b = BRANCHES().find(x=>x.code===ticket.branch);
+  const users = USERS();
+  const ids = new Set();
+
+  // مدير الفرع
+  users.filter(u=>u.role==="Branch Manager" && u.branch===ticket.branch).forEach(u=>ids.add(u.id));
+
+  // مدير المنطقة للفرع
+  if (b?.area) users.filter(u=>u.role==="Area Manager" && u.area===b.area).forEach(u=>ids.add(u.id));
+
+  // مدير البراند للفرع
+  if (b?.brand) users.filter(u=>u.role==="Brand Manager" && u.brand===b.brand).forEach(u=>ids.add(u.id));
+
+  // بحسب التصنيف
+  const catRoleMap = {
+    "Equipment":"Maintenance Manager",
+    "RealEstate":"RealEstate Manager",
+    "Marketing":"Marketing Manager",
+    "Brand":"Brand Manager"
+  };
+  const special = catRoleMap[ticket.category];
+  if (special) users.filter(u=>u.role===special && (!b?.brand || u.brand===b.brand || !u.brand)).forEach(u=>ids.add(u.id));
+
+  // Admin إشراف
+  users.filter(u=>u.role==="Admin").forEach(u=>ids.add(u.id));
+
+  return Array.from(ids);
+}
+
+/* ============ Tickets CRUD ============ */
+let editingTicket = null;
+const tForm = {
+  wrap: byId('ticketForm'),
+  branch: byId('t_branch'),
+  category: byId('t_category'),
+  priority: byId('t_priority'),
+  title: byId('t_title'),
+  sla: byId('t_sla'),
+  desc: byId('t_desc'),
+  attach: byId('t_attach'),
+  routingPreview: byId('routingPreview')
+};
+function fillBranchPickers(){
+  const opts = BRANCHES().map(b=>`<option value="${b.code}">${b.code} — ${b.city||""} / ${b.brand||""}</option>`).join("");
+  tForm.branch.innerHTML = `<option value="">اختر الفرع…</option>` + opts;
+  byId('k_branch').innerHTML = `<option value="">اختر الفرع…</option>` + BRANCHES().map(b=>`<option>${b.code}</option>`).join("");
+}
+function ticketPreview(){
+  const fake = {branch: tForm.branch.value, category: tForm.category.value};
+  if (!fake.branch){ tForm.routingPreview.textContent = "اختر الفرع والتصنيف لعرض المستلمين."; return; }
+  const ids = routeFor(fake);
+  tForm.routingPreview.innerHTML = ids.length ? ids.map(id=>`<span class="pill">${userName(id)}</span>`).join(" ") : `<span class="muted">لا مستلمين مطابقين.</span>`;
+}
+tForm.branch.onchange = ticketPreview; tForm.category.onchange = ticketPreview;
+
+byId('addTicketBtn').onclick = ()=>{
+  editingTicket=null; tForm.wrap.hidden=false;
+  tForm.branch.value=""; tForm.category.value="Operations"; tForm.priority.value="Medium"; tForm.title.value=""; tForm.sla.value=""; tForm.desc.value=""; tForm.attach.value=""; ticketPreview();
+};
+byId('cancelTicketBtn').onclick = ()=> tForm.wrap.hidden=true;
+byId('saveTicketBtn').onclick = ()=>{
+  if (!tForm.branch.value || !tForm.title.value){ alert("الفرع والعنوان مطلوبان."); return;}
+  const arr = TICKETS();
+  const base = {
+    branch: tForm.branch.value, category: tForm.category.value, priority: tForm.priority.value,
+    title: tForm.title.value, desc: tForm.desc.value, status: editingTicket? (arr.find(x=>x.id===editingTicket)?.status || "New") : "New",
+    sla: tForm.sla.value || today(), assignees: routeFor({branch:tForm.branch.value, category:tForm.category.value}),
+    proposed:"", approved:false, comments:[], history:[]
+  };
+  if (editingTicket){
+    const i = arr.findIndex(x=>x.id===editingTicket);
+    if (i>=0) Object.assign(arr[i], base);
+  } else {
+    const t = Object.assign({id:genId("T")}, base);
+    t.history.push({at:new Date().toISOString(), from:"-", to:"New", by: CU()?.id || "U0"});
+    arr.unshift(t);
+  }
+  set(LS.tickets, arr); tForm.wrap.hidden=true; renderTickets(); renderDashboard();
+};
+function canChangeStatus(t){
+  const r = CU()?.role;
+  if (r==="Admin") return true;
+  const myId = CU()?.id;
+  const isAssignee = t.assignees?.includes(myId);
+  return isAssignee; // مبسّطة: من ضمن المستلمين يقدر يغيّر الحالة
+}
+function renderTickets(){
+  const tb = byId('ticketsTable').querySelector('tbody');
+  const s = byId('f_status').value.toLowerCase();
+  const p = byId('f_priority2').value.toLowerCase();
+  const q = (byId('q_tickets').value||"").toLowerCase();
+  const list = TICKETS().filter(t=>{
+    const okS = !s || (t.status||"").toLowerCase()===s;
+    const okP = !p || (t.priority||"").toLowerCase()===p;
+    const text = [t.title,t.branch,t.category].join(" ").toLowerCase();
+    const okQ = !q || text.includes(q);
+    return okS && okP && okQ;
+  });
+  tb.innerHTML = list.map(t=>`
+    <tr>
+      <td>${t.title}</td>
+      <td>${t.branch}</td>
+      <td>${t.category}</td>
+      <td>${t.priority}</td>
+      <td>${t.status}</td>
+      <td>${t.sla||"-"}</td>
+      <td>${(t.assignees||[]).map(userName).map(n=>`<span class="pill">${n}</span>`).join(" ")}</td>
+      <td class="row">
+        <button onclick="editTicket('${t.id}')">تحرير</button>
+        ${canChangeStatus(t)? `
+          <select id="st_${t.id}">
+            <option value="">تغيير الحالة…</option>
+            <option>Under Review</option><option>Solution Proposed</option><option>Approved</option>
+            <option>Implemented</option><option>Needs Info</option><option>Closed</option>
+          </select>
+          <button onclick="applyStatus('${t.id}')">تطبيق</button>
+        `:""}
+      </td>
+    </tr>`).join("");
+}
+byId('f_status').oninput = renderTickets;
+byId('f_priority2').oninput = renderTickets;
+byId('q_tickets').oninput = renderTickets;
+
+window.applyStatus = (id)=>{
+  const sel = byId('st_'+id); const v = sel.value; if(!v) return;
+  const arr = TICKETS(); const t = arr.find(x=>x.id===id); if(!t) return;
+  t.history.push({at:new Date().toISOString(), from:t.status, to:v, by: CU()?.id || "U0"});
+  if (v==="Closed") t.closedAt = new Date().toISOString();
+  t.status = v; set(LS.tickets, arr); renderTickets(); renderDashboard();
+};
+window.editTicket = (id)=>{
+  const t = TICKETS().find(x=>x.id===id); if(!t) return;
+  editingTicket = id; tForm.wrap.hidden=false;
+  tForm.branch.value=t.branch; tForm.category.value=t.category; tForm.priority.value=t.priority; tForm.title.value=t.title;
+  tForm.sla.value=t.sla||""; tForm.desc.value=t.desc||""; tForm.attach.value=""; ticketPreview();
+};
+
+/* ============ KPIs ============ */
+function kpiPoints(branch){ return KPIS().filter(k=>k.branch===branch).sort((a,b)=> a.date.localeCompare(b.date)); }
+function drawKpi(metric){
+  const branch = byId('k_branch').value; const canvas = byId('kpiChart'); const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  if (!branch){ byId('kpiNote').textContent="اختر فرعًا."; return; }
+  const pts = kpiPoints(branch);
+  if (!pts.length){ byId('kpiNote').textContent="لا نقاط KPI لهذا الفرع."; return; }
+  byId('kpiNote').textContent=`الفرع ${branch} — ${metric}`;
+
+  const W=canvas.width, H=canvas.height, pad=30;
+  const vals = pts.map(p=> +p[metric]);
+  const dates = pts.map(p=> p.date);
+  const min = Math.min(...vals), max = Math.max(...vals);
+  function xScale(i){ return pad + i*( (W-2*pad)/(pts.length-1||1) ); }
+  function yScale(v){
+    if (max===min) return H/2;
+    return H - pad - ( (v-min)/(max-min) )*(H-2*pad);
+  }
+  // axes
+  ctx.beginPath(); ctx.moveTo(pad, pad); ctx.lineTo(pad, H-pad); ctx.lineTo(W-pad, H-pad); ctx.stroke();
+
+  // line
+  ctx.beginPath();
+  pts.forEach((p,i)=>{ const x=xScale(i), y=yScale(+p[metric]); i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
+  ctx.stroke();
+
+  // points
+  pts.forEach((p,i)=>{ const x=xScale(i), y=yScale(+p[metric]); ctx.beginPath(); ctx.arc(x,y,3,0,2*Math.PI); ctx.fill(); });
+
+  // labels
+  ctx.font="12px sans-serif";
+  ctx.fillText(max.toFixed(2), 5, pad);
+  ctx.fillText(min.toFixed(2), 5, H-pad);
+  dates.forEach((d,i)=>{ const x=xScale(i); ctx.fillText(d.slice(2), x-12, H-8); });
+}
+function renderKpiTable(branch){
+  const tb = byId('kpiTable').querySelector('tbody');
+  const pts = kpiPoints(branch);
+  tb.innerHTML = pts.map(p=>`
+    <tr>
+      <td>${p.date}</td><td>${p.Sales??""}</td><td>${p.Orders??""}</td>
+      <td>${p.NetProfitPct??""}</td><td>${p.FoodCostPct??""}</td><td>${p.Complaints??""}</td>
+      <td><button onclick="delKpi('${branch}','${p.date}')">حذف</button></td>
+    </tr>`).join("");
+}
+byId('k_branch').onchange = ()=>{
+  renderKpiTable(byId('k_branch').value);
+  drawKpi(byId('k_metric').value);
+};
+byId('k_metric').onchange = ()=> drawKpi(byId('k_metric').value);
+byId('addKpiPointBtn').onclick = ()=>{
+  const branch = byId('k_branch').value;
+  if (!branch) return alert("اختر فرعًا أولاً.");
+  const date = prompt("تاريخ (YYYY-MM-DD):", today()); if(!date) return;
+  const Sales = +prompt("Sales:", "100000")||0;
+  const Orders = +prompt("Orders:", "2000")||0;
+  const NetProfitPct = +prompt("NetProfit%:", "10")||0;
+  const FoodCostPct = +prompt("FoodCost%:", "32")||0;
+  const Complaints = +prompt("Complaints:", "5")||0;
+  const arr = KPIS(); arr.push({branch, date, Sales, Orders, NetProfitPct, FoodCostPct, Complaints});
+  set(LS.kpis, arr); renderKpiTable(branch); drawKpi(byId('k_metric').value);
+};
+window.delKpi = (branch,date)=>{
+  set(LS.kpis, KPIS().filter(k=> !(k.branch===branch && k.date===date)));
+  renderKpiTable(branch); drawKpi(byId('k_metric').value);
+};
+
+/* ============ Export / Import ============ */
+byId('exportBtn').onclick = ()=>{
+  const data = {
+    users: USERS(), branches: BRANCHES(), tickets: TICKETS(), kpis: KPIS()
+  };
+  const blob = new Blob([JSON.stringify(data,null,2)], {type:"application/json"});
+  const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`af_data_${Date.now()}.json`; a.click();
+};
+byId('importInput').onchange = async (e)=>{
+  const f = e.target.files?.[0]; if(!f) return;
+  try{
+    const txt = await f.text(); const obj = JSON.parse(txt);
+    if (obj.users && obj.branches && obj.tickets && obj.kpis){
+      set(LS.users, obj.users); set(LS.branches, obj.branches); set(LS.tickets, obj.tickets); set(LS.kpis, obj.kpis);
+      boot(); alert("تم الاستيراد.");
+    } else alert("صيغة غير متوقعة.");
+  }catch(err){ alert("تعذر الاستيراد."); }
+};
+
+/* ============ Filters bindings ============ */
+byId('f_status').oninput = renderTickets;
+byId('f_priority2').oninput = renderTickets;
+byId('q_tickets').oninput = renderTickets;
+
+/* ============ Boot ============ */
+function boot(){
+  fillCurrentUser(); if (!localStorage.getItem(LS.session)) localStorage.setItem(LS.session, USERS()[0].id);
+  currentUserSel.value = localStorage.getItem(LS.session);
+  renderDashboard();
+  renderBranches();
+  renderPeople();
+  fillBranchPickers();
+  renderTickets();
+  // init kpis
+  const kb = byId('k_branch'); if (!kb.value) kb.value = BRANCHES()[0]?.code || "";
+  renderKpiTable(kb.value); drawKpi(byId('k_metric').value);
+}
+boot();
+</script>
+</body>
+</html>

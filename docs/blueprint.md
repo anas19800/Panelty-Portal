@@ -4,7 +4,9 @@
 
 - Violation Logging: Allow authorized users to log municipal violations, linking each to the relevant branch. Users should be able to choose the operational region, brand, and branch, auto-filling branch information after selection.
 - Objection Logging: Enable the recording and tracking of challenges to logged violations. After choosing a branch, show associated violations and facilitate the submission of supporting documents and final decisions.
+- Task Tracking: Capture operational tickets for branches with priority, category and SLA, automatically routing to relevant managers.
 - Branch Management: Provide a centralized system to manage branch information, including name, city, operational region, brand, manager name, regional manager name, and location link. This data should then auto-populate across the whole app, removing redundant typing.
+- KPI Recording: Store and chart sales, orders and other KPIs per branch for quick performance reviews.
 - Reporting Dashboard: Produce analytics dashboards with visualizations of municipal compliance infractions
 - Role-Based Access Control: Control user access and permissions within the platform, with preset roles like Quality Officer, Regional Manager, Branch Manager, Upper Management, and System Admin.
 

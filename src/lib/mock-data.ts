@@ -181,3 +181,46 @@ export const violationCategories: ViolationCategory[] = [
         ],
     },
 ];
+
+// --- Additional sample data from prototype dashboard ---
+export type Task = {
+  id: string;
+  branch: string;
+  category: string;
+  priority: 'High' | 'Medium' | 'Low';
+  title: string;
+  status: string;
+  sla: string;
+  assignees: string[];
+};
+
+export type KpiPoint = {
+  branch: string;
+  date: string;
+  Sales: number;
+  Orders: number;
+  NetProfitPct: number;
+  FoodCostPct: number;
+  Complaints: number;
+};
+
+export const tasks: Task[] = [
+  {
+    id: 't1',
+    branch: 'KR-111',
+    category: 'Equipment',
+    priority: 'High',
+    title: 'عطل فرن',
+    status: 'Under Review',
+    sla: '2024-05-01',
+    assignees: ['u1', 'u2', 'u3'],
+  },
+];
+
+export const kpiData: KpiPoint[] = [
+  { branch: 'KR-111', date: '2025-08-01', Sales: 120000, Orders: 2300, NetProfitPct: 11.2, FoodCostPct: 31.5, Complaints: 8 },
+  { branch: 'KR-111', date: '2025-09-01', Sales: 132000, Orders: 2450, NetProfitPct: 12.0, FoodCostPct: 30.9, Complaints: 6 },
+  { branch: 'KW-041', date: '2025-08-01', Sales: 90000, Orders: 1700, NetProfitPct: 9.5, FoodCostPct: 33.2, Complaints: 5 },
+  { branch: 'KW-041', date: '2025-09-01', Sales: 97000, Orders: 1810, NetProfitPct: 10.1, FoodCostPct: 32.8, Complaints: 4 },
+];
+
